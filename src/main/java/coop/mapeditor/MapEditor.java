@@ -28,7 +28,8 @@ public class MapEditor {
     private String colorFile = null;
     private ItemWrapper itemWrapper = null;
 
-    
+    private Item newItem;
+
     private final double minStrength = 0.1;
     private final double maxStrength = 1.0;
     
@@ -70,7 +71,7 @@ public class MapEditor {
         if (rVal == JFileChooser.APPROVE_OPTION) {
           	filename.setText(c.getSelectedFile().getName());
         	dir.setText(c.getCurrentDirectory().toString());
-        	System.out.println("Save to file " + filename.getText() + " in " + dir.getText());
+        	Log("Save to file " + filename.getText() + " in " + dir.getText());
       	}
       	else if (rVal == JFileChooser.CANCEL_OPTION) {
         	filename.setText("You pressed cancel");
@@ -89,9 +90,9 @@ public class MapEditor {
    		}
       map.getGameDef().setName(mapName);
       GameWrapper gameWrapper = map.getGameWrapper();
-   		System.out.println("Saving to file " + mapFileName);   		
+   		Log("Saving to file " + mapFileName);   		
    		MapFile.writeMapFile(mapFileName, gameWrapper);
-   		System.out.println("Saving game info to " + gameWrapper.getGameDef().getName());
+   		Log("Saving game info to " + gameWrapper.getGameDef().getName());
    		GameFile.saveToXML(gameWrapper.getGameDef());
       colorSelector.save();
    	}
@@ -105,7 +106,7 @@ public class MapEditor {
    		else {
    			mapFrame = new JFrame(mapName);
    		}		
-   		System.out.println("Opening to file " + mapFileName);
+   		Log("Opening to file " + mapFileName);
    		GameWrapper gameWrapper = GameWrapper.readGameWrapperFile(mapFileName);   		  		
    		mapDim = gameWrapper.getMapDef().getDim(); 		
    		mapFrame.setSize(mapDim.getX(), mapDim.getY());
@@ -120,7 +121,7 @@ public class MapEditor {
 	  private void editCells() {	
 		  colorFrame.setVisible(true);
       if (map == null) {
-        System.out.println("ERROR: No map available");
+        Log("ERROR: No map available");
       }
       else {
         map.setEditMode("cell");
@@ -131,7 +132,7 @@ public class MapEditor {
 
     private void editDoors() {
       if (map == null) {
-        System.out.println("ERROR: No map available");
+        Log("ERROR: No map available");
         return;
       }
       map.setEditMode("door");
@@ -284,7 +285,7 @@ public class MapEditor {
           public void actionPerformed(ActionEvent e) {
             Color defaultColor = colorSelector.getColor();
             if (defaultColor == null) {
-              System.out.println("ERROR: No color selected");
+              Log("ERROR: No color selected");
             }
             else {
               map.setDefaultColor(defaultColor);
@@ -329,11 +330,11 @@ public class MapEditor {
              	      			
              	if (mapFileName == null) {return;}
              	if (xText.getText()==null || !xText.getText().matches("\\d+")) {
-             		System.out.println("validation failed for x");
+             		Log("validation failed for x");
              		return;
              	}
              	if (yText.getText()==null || !yText.getText().matches("\\d+")) {return;}
-             	System.out.println("Create new map " + mapFileName + " size " + xText.getText() + " x " + yText.getText());
+             	Log("Create new map " + mapFileName + " size " + xText.getText() + " x " + yText.getText());
              	mapFrame = new JFrame(mapFileName);
              	mapFileName = checkExtension(mapFileName);
              	mapDim = new MyPoint(xText.getText(), yText.getText());
@@ -423,10 +424,10 @@ public class MapEditor {
 
    		doneButton.addActionListener(new ActionListener() {
          	public void actionPerformed(ActionEvent e) {
-         		System.out.println("Adding description for selected cell");
+         		Log("Adding description for selected cell");
             Cell selectedCell = map.getSelectedCell();
             if (selectedCell == null) {
-              System.out.println("No cell selected");
+              Log("No cell selected");
             }
             else {
          		  Place place = selectedCell.getPlace();
@@ -454,7 +455,7 @@ public class MapEditor {
                   place.setDesc(descText.getText());
               }
               else {
-                System.out.println("ERROR: a place can only be moved to a free cell");
+                Log("ERROR: a place can only be moved to a free cell");
               }            
          		 
          	  }
@@ -551,19 +552,20 @@ public class MapEditor {
               Cell selectedCell = map.getSelectedCell();
               Place sourcePlace = sourceCell.getPlace();              
               if (selectedCell == null) {
-                  System.out.println("No cell selected");
+                  Log("No cell selected");
               }
               else {
                   Place place = selectedCell.getPlace();
                   if (place == null) {
-                      System.out.println("No Place found - use Game Desc to create it here");
+                      Log("No Place found - use Game Desc to create it here");
                   }
                   else if (place != sourcePlace) {
+                      sourcePlayer.setPlace(place);
                       place.addPlayer(sourcePlayer);
                       sourceCell.getPlace().removePlayer(sourcePlayer);
                   }
                   else {
-                      System.out.println("A different place was not selected...");
+                      Log("A different place was not selected...");
                   }
               }
               dialogFrame.dispatchEvent(new WindowEvent(dialogFrame, WindowEvent.WINDOW_CLOSING));
@@ -572,15 +574,15 @@ public class MapEditor {
 
       submitButton.addActionListener(new ActionListener() {
         public void actionPerformed(ActionEvent e) {
-            System.out.println("Adding player to selected cell");
+            Log("Adding player to selected cell");
             Cell selectedCell = map.getSelectedCell();
             if (selectedCell == null) {
-              System.out.println("No cell selected");
+              Log("No cell selected");
             }
             else {
               Place place = selectedCell.getPlace();              
               if (place == null) {
-                System.out.println("No Place found - use Game Desc to create it here");
+                Log("No Place found - use Game Desc to create it here");
               }
               else {
                 if (sourcePlayer == null) {                    
@@ -591,9 +593,9 @@ public class MapEditor {
                           strengthApplyLimits(Double.parseDouble(strengthText.getText())));
                     map.getGameDef().addPlayer(player);
                     int s = (place.getPlayers() == null) ? 0 : place.getPlayers().size();
-                    System.out.println("Adding " + nameText.getText() + " to place with num players = " + s);
+                    Log("Adding " + nameText.getText() + " to place with num players = " + s);
                     place.addPlayer(player);
-                    System.out.println("num players = " + place.getPlayers().size());
+                    Log("num players = " + place.getPlayers().size());
 
                 }
                 else if (place == sourcePlayer.getPlace()) {
@@ -636,13 +638,185 @@ public class MapEditor {
         editGamePlayer(sourceCell, srcCopy);
     }
 
-	  private void gameItem() {
+    private void editGameItems(Cell sourceCell, java.util.List<Item> sourceItems) { 
+        JFrame dialogFrame = new JFrame("Item");
+        dialogFrame.setLayout(new GridLayout(sourceItems.size()+2, 1));         
+        dialogFrame.setSize(400, 500);       
+        JLabel instructionLabel = new JLabel("<html>Jeremy, you have four options here:<br><br>1.Select an item and press <b>Modify</b><br>" +                  
+                    "2. Select an item <b>and</b> select another cell and then press <b>Move</b><br>" +
+                    "3. Press <b>New</b> to add a new item to this location.<br>" +
+                    "4. Press Delete to remove the selected item<br>", JLabel.CENTER);
+        java.util.Map<JCheckBox, Item> checkBoxMap = new HashMap<JCheckBox, Item>(); 
+        dialogFrame.add(instructionLabel);     
+        for (Item item : sourceItems) {            
+            JCheckBox checkBox = new JCheckBox(item.getName() + " " + item.getType());
+            checkBoxMap.put(checkBox, item);            
+            JPanel panel = new JPanel();
+            panel.setLayout(new FlowLayout());
+            panel.add(checkBox);
+            dialogFrame.add(panel);
+        }
+        Button modifyButton = new Button("Modify");
+        Button moveButton = new Button("Move");
+        Button deleteButton = new Button("Delete");
+        Button newButton = new Button("New");
+        JPanel buttonControlPanel = new JPanel(new FlowLayout());
+        buttonControlPanel.add(modifyButton);
+        buttonControlPanel.add(moveButton);
+        buttonControlPanel.add(deleteButton);
+        buttonControlPanel.add(newButton);
+        dialogFrame.add(buttonControlPanel);
+        dialogFrame.setVisible(true); 
+        map.setEditMode("highlight");
+        map.enableClick();
+        map.enableMotion();
+
+        modifyButton.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                Item item = getSelectedItem(checkBoxMap);
+                if (item != null) {
+                    modifyGameItem(item);
+                }
+                dialogFrame.dispatchEvent(new WindowEvent(dialogFrame, WindowEvent.WINDOW_CLOSING));
+            }              
+        });
+
+        newButton.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                addGameItem();  // null means add new player
+                dialogFrame.dispatchEvent(new WindowEvent(dialogFrame, WindowEvent.WINDOW_CLOSING));
+            }              
+        });
+
+        deleteButton.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                Item item = getSelectedItem(checkBoxMap);
+                if (item != null) {
+                    Place place = item.getPlace();
+                    place.removeItem(item);
+                }
+                dialogFrame.dispatchEvent(new WindowEvent(dialogFrame, WindowEvent.WINDOW_CLOSING));
+            }              
+        });
+
+        moveButton.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                Item sourceItem = getSelectedItem(checkBoxMap);
+                if (sourceItem == null) {
+                    Log("No item selected");
+                }
+                else {
+                    Cell selectedCell = map.getSelectedCell();
+                    Place sourcePlace = sourceCell.getPlace();              
+                    if (selectedCell == null) {
+                        Log("No cell selected");
+                    }
+                    else {
+                        Place place = selectedCell.getPlace();
+                        if (place == null) {
+                            Log("No Place found - use Game Desc to create it here");
+                        }
+                        else if (place != sourcePlace) {
+                            sourceItem.setPlace(place);
+                            place.addItem(sourceItem);
+                            sourceCell.getPlace().removeItem(sourceItem);
+                        }
+                        else {
+                            Log("A different place was not selected...");
+                        }
+                    }
+                }
+                dialogFrame.dispatchEvent(new WindowEvent(dialogFrame, WindowEvent.WINDOW_CLOSING));
+            }              
+        });   
+    }
+
+    private Item getSelectedItem(java.util.Map<JCheckBox, Item> checkBoxMap) {
+        Iterator entries = checkBoxMap.entrySet().iterator();
+        Item selectedItem = null;
+        while ( entries.hasNext()) {
+            java.util.Map.Entry entry = (java.util.Map.Entry)entries.next();
+            JCheckBox checkBox = (JCheckBox)entry.getKey();                    
+            if (checkBox.isSelected()) {
+                selectedItem = (Item)entry.getValue();
+            }
+        }
+        return selectedItem;
+    }
+
+    private void modifyGameItem(Item item) {
+        JFrame dialogFrame = new JFrame("Edit "+item.getType());
+        dialogFrame.setLayout(new GridLayout(5, 1));
+        dialogFrame.setSize(400, 400); 
+        JLabel instructionLabel = new JLabel("Edit the item", JLabel.CENTER);
+        JLabel nameLabel = new JLabel("Item name:");
+        JLabel weightLabel = new JLabel("Item weight (kg):");
+        final JTextField nameText = new JTextField(10);
+        nameText.setText(item.getName());
+        final JTextField dataText = new JTextField(10);
+        final JTextField weightText = new JTextField(10);
+        weightText.setText(Double.toString(item.getWeight()));
+
+        JLabel dataLabel = new JLabel(item.getType()+" data:");
+        JPanel nameControlPanel = new JPanel();
+        nameControlPanel.setLayout(new FlowLayout());
+        JPanel dataControlPanel = new JPanel();
+        JPanel weightControlPanel = new JPanel();
+        nameControlPanel.add(nameLabel);
+        nameControlPanel.add(nameText);
+        dialogFrame.add(instructionLabel);
+        dialogFrame.add(nameControlPanel);
+        weightControlPanel.add(weightLabel);
+        weightControlPanel.add(weightText);
+        dialogFrame.add(weightControlPanel);
+
+        if (item instanceof HasText) {
+            HasText textItem = (HasText)item;
+            dataText.setText(textItem.getText());
+            dataControlPanel.setLayout(new FlowLayout());
+            dataControlPanel.add(dataLabel);
+            dataControlPanel.add(dataText);
+            dialogFrame.add(dataControlPanel);
+        }
+        else if (item instanceof HasValue) {
+            HasValue valueItem = (HasValue)item;
+            dataText.setText(Double.toString(valueItem.getValue()));
+            dataControlPanel.setLayout(new FlowLayout());
+            dataControlPanel.add(dataLabel);
+            dataControlPanel.add(dataText);
+            dialogFrame.add(dataControlPanel);
+        }
+        Button submitButton = new Button("Submit");
+        JPanel buttonControlPanel = new JPanel();
+        buttonControlPanel.setLayout(new FlowLayout());
+        buttonControlPanel.add(submitButton);
+        dialogFrame.add(buttonControlPanel);
+        dialogFrame.setVisible(true);
+
+        submitButton.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                item.setName(nameText.getText());
+                item.setWeight(Double.parseDouble(weightText.getText()));
+                if (item instanceof HasText) {
+                    HasText textItem = (HasText)item;
+                    textItem.setText(dataText.getText());
+                }
+                else if (item instanceof HasValue) {
+                    HasValue valueItem = (HasValue)item;
+                    valueItem.setValue(Double.parseDouble(dataText.getText()));
+                }
+                dialogFrame.dispatchEvent(new WindowEvent(dialogFrame, WindowEvent.WINDOW_CLOSING));
+            }              
+        });
+    }
+
+	  private void addGameItem() {
         java.util.Map<String, Class<?>> itemMap = itemWrapper.getItems();
         JFrame dialogFrame = new JFrame("Item");
         dialogFrame.setLayout(new GridLayout(4, 1));         
         dialogFrame.setSize(400, 500);
-        JLabel instructionLabel = new JLabel("Select the name and type of item to add", JLabel.CENTER);
-        JLabel nameLablel = new JLabel("Item name:");
+        JLabel instructionLabel = new JLabel("Select the name and type of item to add", JLabel.CENTER);        
+        JLabel nameLablel = new JLabel("Item name:");        
         JLabel typeLabel = new JLabel("Item type:");
         final JTextField nameText = new JTextField(10);        
         final DefaultListModel itemListModel = new DefaultListModel();        
@@ -655,12 +829,13 @@ public class MapEditor {
         itemList.setVisibleRowCount(6);
         JScrollPane itemListScrollPane = new JScrollPane(itemList);
         Button submitButton = new Button("Submit");
-        JPanel nameControlPanel = new JPanel();
+        JPanel nameControlPanel = new JPanel();        
         JPanel typeControlPanel = new JPanel();
         JPanel buttonControlPanel = new JPanel();
         nameControlPanel.setLayout(new FlowLayout());
         typeControlPanel.setLayout(new FlowLayout());
         buttonControlPanel.setLayout(new FlowLayout());
+             
         nameControlPanel.add(nameLablel);
         nameControlPanel.add(nameText);
         typeControlPanel.add(typeLabel);
@@ -671,18 +846,30 @@ public class MapEditor {
         dialogFrame.add(typeControlPanel);
         dialogFrame.add(buttonControlPanel);
         dialogFrame.setVisible(true);
-
+        newItem = null;       
+                         
         submitButton.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                if (itemList.getSelectedIndex() != -1) {                    
+                // FIXME: a class can implement more than one interface!
+                if (newItem != null && newItem instanceof HasText) {
+                    HasText textItem = (HasText)newItem;
+                    textItem.setText(nameText.getText());
+                    dialogFrame.dispatchEvent(new WindowEvent(dialogFrame, WindowEvent.WINDOW_CLOSING));
+                }
+                else if (newItem != null && newItem instanceof HasValue) {
+                    HasValue valueItem = (HasValue)newItem;
+                    valueItem.setValue(Double.parseDouble(nameText.getText()));
+                    dialogFrame.dispatchEvent(new WindowEvent(dialogFrame, WindowEvent.WINDOW_CLOSING));
+                }                  
+                else if (itemList.getSelectedIndex() != -1) {                    
                     Cell selectedCell = map.getSelectedCell();
                     if (selectedCell == null) {
-                        System.out.println("No cell selected");
+                        Log("No cell selected");                        
                     }
                     else {
                         Place place = selectedCell.getPlace();
                         if (place == null) {
-                            System.out.println("No Place found - use Game Desc to create it here");
+                            Log("No Place found - use Game Desc to create it here");
                         }
                         else {
                             Class c = itemMap.get(itemList.getSelectedValue());
@@ -690,20 +877,50 @@ public class MapEditor {
                             try {
                                 obj = c.newInstance();
                             }
-                            catch (InstantiationException ex) {
+                            catch (InstantiationException | IllegalAccessException ex) {
                                 ex.printStackTrace();
-                            } catch (IllegalAccessException ex) {
-                                ex.printStackTrace();
-                            }                        
-                            Item item = (Item)obj;
-                            place.addItem(item);
+                            }                       
+                            newItem = (Item)obj;
+                            String id = map.getGameDef().getNextItemID();
+                            newItem.setName(nameText.getText());
+                            newItem.setID(id);
+                            newItem.setPlace(place);
+                            map.getGameDef().addItem(newItem);
+                            place.addItem(newItem);
                         }
-                    }                                      
-                    dialogFrame.dispatchEvent(new WindowEvent(dialogFrame, WindowEvent.WINDOW_CLOSING));
+                    }
+                    if (newItem != null && newItem instanceof HasText) {
+                        instructionLabel.setText("Enter the text for the " + newItem.getType());
+                        nameLablel.setText(newItem.getType()+" text:");
+                        nameText.setText("");
+                        typeControlPanel.setVisible(false);                        
+                    }
+                    else if (newItem != null && newItem instanceof HasValue) {
+                        instructionLabel.setText("Enter the value for the " + newItem.getType());
+                        nameLablel.setText(newItem.getType()+" value:");
+                        nameText.setText("");
+                        typeControlPanel.setVisible(false);  
+                    }
+                    else {                                     
+                      dialogFrame.dispatchEvent(new WindowEvent(dialogFrame, WindowEvent.WINDOW_CLOSING));
+                    }
                 }
             }              
         });  
    	}
+
+    private void gameItem() {
+        Cell sourceCell = map.getSelectedCell();
+        Place sourcePlace = (sourceCell == null) ? null : sourceCell.getPlace();
+        java.util.List<Item> sourceItems = (sourcePlace == null) ? null : sourcePlace.getItems(); 
+        if (sourceItems == null || sourceItems.size() == 0) {
+            addGameItem();
+        }
+        else {                    
+            editGameItems(sourceCell, sourceItems);
+        }
+
+    }
 
    	private void cleanup(boolean dosave) {
    		if (mapFrame != null) {
@@ -852,6 +1069,7 @@ public class MapEditor {
 
    class EditMenuListener implements ActionListener {
       	public void actionPerformed(ActionEvent e) {
+          statusLabel.setText("");
       		String cmd = e.getActionCommand();
 //         	statusLabel.setText( cmd + " JMenuItem clicked.");
          	if (cmd.equals("Cells")){
@@ -877,9 +1095,10 @@ public class MapEditor {
    }
 
    class ViewMenuListener implements ActionListener {
-        public void actionPerformed(ActionEvent e) {         
+        public void actionPerformed(ActionEvent e) {
+          statusLabel.setText("");        
           String cmd = e.getActionCommand();
-          System.out.println("view menu got command: " + cmd);
+          Log("view menu got command: " + cmd);
           if (cmd.equals("Mode")){
             setViewMode();   
           }
@@ -888,6 +1107,7 @@ public class MapEditor {
 
    class GameMenuListener implements ActionListener {
       	public void actionPerformed(ActionEvent e) {
+          statusLabel.setText("");
       		String cmd = e.getActionCommand();
 //         	statusLabel.setText( cmd + " JMenuItem clicked.");
          	if (cmd.equals("Place")){
@@ -900,6 +1120,11 @@ public class MapEditor {
          		gameItem();
          	}         	         	
       }    
+   }
+
+   private void Log(String msg) {
+      statusLabel.setText(msg);
+      System.out.println(msg);
    }
 
 }

@@ -26,7 +26,7 @@ public class GameWrapper {
 			while ((line = br.readLine()) != null) {
 				String[] type_data = line.split(":");
 				String type = type_data[0];
-				if (type.contains("place") || type.contains("player")) {
+				if (type.contains("place") || type.contains("player") || type.contains("item")) {
 					gameDef.parseLine(line);
 				}
 				else {

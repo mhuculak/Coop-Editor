@@ -2,13 +2,16 @@ package coop.map;
 
 import coop.map.Place;
 import coop.player.Player;
+import coop.item.Item;
 
 import java.util.*;
+import java.lang.reflect.*;
 
 public class GameDef {
 	private String gameName;
 	private List<Place> places;
-	private List<Player> players;	
+	private List<Player> players;
+	private List<Item> items;	
 
 	public void setName(String name) {
 		System.out.println("GameDef checking name " + name);
@@ -32,6 +35,24 @@ public class GameDef {
 			Player p = new Player(line);
 			addPlayer(p);
 		}
+		else if (line.contains("item")) {
+			String[] z = line.split("#");
+			String className = z[z.length-1];
+			line = line.substring(0, line.length() - className.length() - 1); // trims #className
+			Object obj = null;
+			try {
+				
+				Class c = Class.forName(className);
+				Constructor ctor = c.getConstructor(String.class);
+				obj = ctor.newInstance(line);
+			}
+			catch (NoSuchMethodException | InstantiationException | ClassNotFoundException | IllegalAccessException | InvocationTargetException ex) { // Live dnagerously!
+				ex.printStackTrace();
+			}
+			Item item = (Item)obj;
+			System.out.println("Adding item " + item.getName() + " of type " + item.getType());
+			addItem(item);
+		}
 		else {
 			System.out.println("ERROR: GameDef cannot parse " + line);
 		}	
@@ -52,6 +73,13 @@ public class GameDef {
 		players.add(player);
 	}
 
+	public void addItem(Item item) {
+		if ( items == null) {
+			items = new ArrayList<Item>();
+		}
+		items.add(item);
+	}
+
 	public String getName() {
 		return gameName;
 	}
@@ -64,12 +92,25 @@ public class GameDef {
 		return players;
 	}
 
+	public List<Item> getItems() {
+		return items;
+	}
+
 	public String getNextPlayerID() {
 		if (players == null || players.size() == 0) {
 			return "0";
 		}
 		else {
 			return Integer.toString(players.size());
+		}
+	}
+
+	public String getNextItemID() {
+		if (items == null || items.size() == 0) {
+			return "0";			
+		}
+		else {
+			return Integer.toString(items.size());
 		}
 	}
 
@@ -97,6 +138,21 @@ public class GameDef {
   					System.out.println("Setting place for player " + player.getName() + " to " + place.getPlaceName());
   					player.setPlace(place);
   					place.addPlayer(player); 
+  				}
+  			}  			
+  		}
+  		if (items != null) {
+  			System.out.println("Resolving items...");
+	  		for ( Item item : items) {
+	  			System.out.println("Resolving item " + item.getName());
+  				Place place = getPlace(item.getPlaceID());
+  				if (place == null) {
+  					System.out.println("ERROR: could not resolve place ID " + item.getPlaceID());
+  				}
+  				else {
+  					System.out.println("Setting place for item " + item.getName() + " to " + place.getPlaceName());
+  					item.setPlace(place);
+  					place.addItem(item); 
   				}
   			}  			
   		}

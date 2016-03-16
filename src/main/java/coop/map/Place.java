@@ -1,6 +1,7 @@
 package coop.map;
 
 import coop.io.*;
+import coop.item.*;
 import coop.player.Player;
 
 import java.util.*;
@@ -12,6 +13,7 @@ public class Place {
 	private String id;
 	private CrossPattern crossPattern;
 	private List<Player> players;
+	private List<Item> items;
 
 	public Place(String id, String name) {
 		this.id = id;
@@ -68,7 +70,19 @@ public class Place {
 				}
 			}
 		}
+	}
+
+	public void addItem(Item item) {
+		if (items == null) {
+			items = new ArrayList<Item>();			
+		}
+		System.out.println("Add item " + item.getName());
+		items.add(item);
 	}	
+
+	public void removeItem(Item item) {
+		items.remove(item);
+	}
 
 	public CrossPattern getCrossPattern() {
 		return crossPattern;
@@ -128,6 +142,10 @@ public class Place {
 		return players;
 	}
 
+	public List<Item> getItems() {
+		return items;
+	}
+
 	public String getDesc() {
 		for (Prop prop : props) {
 			if (prop.getName().equals("desc")) {			
@@ -149,11 +167,16 @@ public class Place {
 
 	public String getMouseOverInfo() {
 		StringBuilder sb = new StringBuilder(100);
-		sb.append(placeName);
-		if (players != null) {
-			sb.append(": ");
+		sb.append(placeName+":");
+		if (players != null) {			
 			for ( Player player : players) {
 				sb.append(player.getName()+", ");
+			}
+			
+		}
+		if (items != null) {
+			for ( Item item : items ) {
+				sb.append(item.getName()+", ");
 			}
 		}
 		return sb.toString();

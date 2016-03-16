@@ -2,23 +2,18 @@ package coop.item;
 
 import java.util.*;
 
-public class ActionItem extends Item {
-
+// FIXME: need to add the plumbing to support adding and removing items
+public class ContainerItem extends Item {
+	
+	private List<Item> items;
 	private List<String> actions;
 
-	public ActionItem() {
+	public ContainerItem() {
 
-	}
+	}	
 
-	public ActionItem(String line) {
-		super(line.split("#")[0]);
-		String[] data = line.split("#");		
-		if (data.length >= 3) { //  the tail will be read by the child class
-			String[] a = data[2].split(",");
-			for ( int i=0 ; i<a.length ; i++ ) {
-				addAction(a[i]);
-			}
-		}
+	public ContainerItem(String line) {
+
 	}
 
 	public List<String> getActions() {
@@ -48,5 +43,5 @@ public class ActionItem extends Item {
 		}
 		return sb.toString();
 	}
-	
+
 }

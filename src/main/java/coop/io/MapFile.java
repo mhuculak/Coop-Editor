@@ -7,6 +7,7 @@ import coop.map.CellDef;
 import coop.map.Wall;
 import coop.map.Door;
 import coop.player.Player;
+import coop.item.Item;
 
 import java.io.*;
 import java.util.Map;
@@ -42,6 +43,12 @@ public class MapFile {
 			if (gameDef.getPlayers() != null) {
 				for (Player player : gameDef.getPlayers()) {
 					bw.write(player.toString());
+					bw.newLine();
+				}
+			}
+			if (gameDef.getItems() != null) {
+				for (Item item: gameDef.getItems()) {
+					bw.write(item.toString(item.getClass().getName()));
 					bw.newLine();
 				}
 			}

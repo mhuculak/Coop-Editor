@@ -15,29 +15,28 @@ public class ItemWrapper {
 
     public ItemWrapper() {
     	initItems();
-    	initActions();
+    	initActions();        
     }
 
     public Map<String, Class<?>> getItems() {
     	return itemMap;
     }
 
-	private void initItems() {
-/*		
-        actionItems.add(Key.class);
-        actionItems.add(Pen.class);
-        actionItems.add(Paper.class);
-        changeItems.add(Paper.class);
-        binderItems.add(Rope.class);
-        obstacleItems.add(Boulder.class);
-*/        
+
+	private void initItems() {        
         itemMap = new HashMap<String, Class<?>>();
         itemMap.put("key", Key.class);
         itemMap.put("pen", Pen.class);
         itemMap.put("paper", Paper.class);
         itemMap.put("note", Note.class);
         itemMap.put("rope", Rope.class);
-        itemMap.put("boulder", Boulder.class);        
+        itemMap.put("obstacle", Obstacle.class);
+        itemMap.put("gold", Gold.class);
+        itemMap.put("phone", Phone.class);
+        itemMap.put("shovel", Shovel.class);
+        itemMap.put("knife", Knife.class);
+        itemMap.put("bucket", Bucket.class); 
+        itemMap.put("bag", Bag.class);          
     }
 
     private void initActions() {
@@ -61,6 +60,9 @@ public class ItemWrapper {
  	  	actions.add("cut");
  	  	actions.add("dig");
  	  	actions.add("pour");
+        actions.add("fill");
+        actions.add("put");
+        actions.add("remove");
  	  	actions.add("cook");
  	  	actions.add("climb");
  	  	actions.add("boost"); 	  	
@@ -74,27 +76,4 @@ public class ItemWrapper {
      	}
      	return false;
      }
-/*
-     public ArrayList<Class<?>> getActionItems() {
-     	return actionItems;
-     }
-
-     public ArrayList<Class<?>> getContainerItems() {
-     	return containerItems;
-     }
-
-     public ArrayList<Class<?>> getBinderItems() {
-     	return binderItems;
-     }
-
-	public ArrayList<Class<?>> getObstacleItems() {
-     	return obstacleItems;
-     }
-
-    public ArrayList<Class<?>> getChangeItems() {
-    	return changeItems;
-    }
-*/
-    
-
 }
