@@ -6,6 +6,7 @@ public class Player {
 
 	private String id;
 	private String name;
+	private String className;
 	private String desc;	
 	private Place place;
 	private String placeID;		
@@ -21,6 +22,7 @@ public class Player {
 		this.height = height;
 		this.weight = weight;
 		this.strength = strength;
+		this.className = "coop.player.Player";
 	}
 
 	public Player(String line) {				
@@ -32,6 +34,7 @@ public class Player {
 		height = Double.parseDouble(d[4]);
 		weight = Double.parseDouble(d[5]);
 		strength = Double.parseDouble(d[6]);
+		this.className = "coop.player.Player";
 	}
 
 	public void setPlace(Place place) {
@@ -46,8 +49,16 @@ public class Player {
 		return placeID;
 	}
 
+	public String getID() {
+		return id;
+	}
+
 	public String getName() {
 		return name;
+	}
+
+	public String getClassName() {
+		return className;
 	}
 
 	public void setName(String name) {

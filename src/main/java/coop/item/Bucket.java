@@ -17,6 +17,7 @@ public class Bucket extends ContainerItem {
 		addAction("remove");
 		addAction("pour");
 		addAction("fill");
+		setWeight(1.0);
 	}
 	
 }

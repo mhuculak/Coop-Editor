@@ -6,6 +6,7 @@ import coop.util.*;
 
 import java.awt.*;
 import java.awt.event.*;
+import java.awt.image.*;
 import javax.swing.*;
 import java.util.*;
 
@@ -81,6 +82,9 @@ public class GameMap extends JPanel {
 	private double m_cellSize;	
 	private double m_edgeSize;
 	private double m_yLen;
+  private int m_cellsPerRow;
+  private int m_numRows;
+  private int m_numCells;
 	private java.util.List<Cell> m_cells;
   private java.util.List<Wall> m_walls;
   private java.util.List<Door> m_doors;
@@ -98,41 +102,42 @@ public class GameMap extends JPanel {
   private double m_currentWallHeight;
   private boolean m_currentWallHasRoof;
   private boolean m_currentDoorIsLocked;
+  private String m_currentDoorKeyName;
   private Color m_defaultCellColor;
+  private Texture m_defaultCellTexture;
   private String m_viewMode;        // all, game
+  private static int m_waterID;
+  private static int m_wallID;
     
     // ctor for new game map
-	public GameMap(JFrame frame, MyPoint mapDim) {
+	public GameMap(JFrame frame, MyPoint mapDim, double edgeSize) {
 //		m_colorSelector = colorSelector;
 		m_frame = frame;
 		m_configParams = new ConfigParams();
+    initParams();
     m_gameDef = new GameDef(); 
-		/*
-		      Default values for the config params go here
-		 */
-		m_configParams.addDoubleParam("gridFactor", 20.0);  // number of cells per minimum dimension
-		m_configParams.addDoubleParam("minCellSize", 5.0);
-    m_configParams.addDoubleParam("wallThickness", 5.0);
-    m_configParams.addDoubleParam("gridThickness", 1.0);
-    m_configParams.addDoubleParam("placeThickness", 3.0);
-    m_configParams.addDoubleParam("selectThickness", 3.0);
-
-		setupGrid( mapDim );
+    
+		setupGrid( mapDim, edgeSize);
 		int xoff = (int)(m_xoff + 0.5);
 		int yoff = (int)(m_yoff + 0.5);
 		int id = 0;
-		for ( double y=0 ; y<m_mapDim.getY() ; y += m_yLen) {
-			int ys = (int)(y + 0.5);
-			for ( double x=0 ; x<m_mapDim.getX() ; x += 3*m_edgeSize) {
-				int xs = (int)(x + 0.5);
-				MyPoint position = new MyPoint(xs, ys);
-				Polygon hexagon = getHexagon(position);
-				m_cells.add(new Cell(Integer.toString(id++), hexagon, position));
-				position = new MyPoint(xs + xoff, ys + yoff);
-				hexagon = getHexagon(position);				
-				m_cells.add(new Cell(Integer.toString(id++), hexagon, position));
-			}
-		}
+
+    for ( int i=0 ; i<m_numRows ; i++) {
+      double y = m_yoff*i;
+      int ys = (int)(y + 0.5);
+      for ( int j=0 ; j<m_cellsPerRow ; j++) {
+        double x = 3*m_edgeSize*j;
+        if ( (i % 2) == 1) {
+          x += m_xoff;
+        }
+        int xs = (int)(x + 0.5);
+        MyPoint position = new MyPoint(xs, ys);
+        Polygon hexagon = getHexagon(position);
+        Cell cell = new Cell(Integer.toString(id++), hexagon, position);
+        cell.setCenter(m_edgeSize, m_yLen);
+        m_cells.add(cell);
+      }
+    }    
 		start();
 	}
 
@@ -143,44 +148,74 @@ public class GameMap extends JPanel {
 		m_configParams = gameWrapper.getMapDef().getConfigParams();
     m_gameDef = gameWrapper.getGameDef();   
     m_defaultCellColor = gameWrapper.getMapDef().getDefaultColor();
-		setupGrid(gameWrapper.getMapDef().getDim());
+    m_defaultCellTexture = gameWrapper.getMapDef().getDefaultTexture();
+		setupGrid(gameWrapper.getMapDef().getDim(), m_configParams.getDoubleParam("edgeSize"));
 		m_cells = new ArrayList<Cell>();		
 		for (CellDef cellDef : gameWrapper.getMapDef().getCells()) {			
 			Polygon hexagon = getHexagon(cellDef.getPosition());
-      Cell cell = new Cell(cellDef.getID(), hexagon, cellDef.getPosition(), cellDef.getColor());
+      Cell cell = null;
+      if (cellDef.getTexture() != null) {
+//        System.out.println("Creating cell with texture" + cellDef.getTexture().getName());
+        cell = new Cell(cellDef.getID(), hexagon, cellDef.getPosition(), cellDef.getTexture());        
+      }
+      else {
+        cell = new Cell(cellDef.getID(), hexagon, cellDef.getPosition(), cellDef.getColor());
+      }
+      cell.setCenter(m_edgeSize, m_yLen);
 			m_cells.add(cell);
+      
       if (m_gameDef.getPlaces() != null) {
         for ( Place place : m_gameDef.getPlaces() ) {
             if ( place.getID().equals(cellDef.getID())) {
                 cell.setPlace(place);
                 place.setCrossPattern(getCrossPattern(cell.getPosition()));
+                place.setCell(cell);
             }
         }
       }
 		}
+    for (Cell cell : m_cells) {
+      if (cell.getTexture() != null && cell.getTexture().getName().contains("water")) {
+          addWater(cell);
+        }
+    }
     m_walls = gameWrapper.getMapDef().getWalls();
     m_doors = gameWrapper.getMapDef().getDoors();
-		
+		m_wallID = getMaxID(m_walls);
 		start();
 	}  
 
-  private void setupGrid(MyPoint mapDim) {
+  private void setupGrid(MyPoint mapDim, double edgeSize) {
+      
       m_viewMode = "all";
 		  m_mapDim = mapDim;
-		  double gridFactor = m_configParams.getDoubleParam("gridFactor");
-		  m_cellSize = mapDim.getX() / gridFactor;      	
-		  double minCellSize = m_configParams.getDoubleParam("minCellSize");
-		  if (m_cellSize < minCellSize) { // enforce minimum cell size
-			   m_cellSize = minCellSize;
-			   gridFactor = mapDim.getX() / m_cellSize;
-			  m_configParams.addDoubleParam("gridFactor", gridFactor);
+		  double minEdgeSize = m_configParams.getDoubleParam("minEdgeSize");
+      m_edgeSize = edgeSize; // m_configParams.getDoubleParam("edgeSize");
+		  if (m_edgeSize < minEdgeSize) { // enforce minimum cell size
+			   m_edgeSize = minEdgeSize;
 		  }
-		  m_edgeSize = 0.6 * m_cellSize; // Note: 3 hexagons will fit along a distance of 5 edges		
+		  m_configParams.addDoubleParam("edgeSize", m_edgeSize);
 		  m_yLen = m_edgeSize*Math.sqrt(3.0);
 		  m_cells = new ArrayList<Cell>();
 		  m_xoff = 3.0*m_edgeSize/2.0;		
-		  m_yoff = m_yLen/2.0;		
+		  m_yoff = m_yLen/2.0;
+      m_cellsPerRow = (int)(mapDim.getX() / (3*m_edgeSize));
+      m_configParams.addIntParam("cellsPerRow", m_cellsPerRow);
+      m_numRows = (int)(m_mapDim.getY() / m_yoff);
+      m_numCells = m_numRows*m_cellsPerRow;
+      m_waterID = 0;
+      m_wallID = 0;
+      System.out.println("Cells per row = " + m_cellsPerRow + " edge size = " + m_edgeSize);
 	}
+
+  private void initParams() {
+    m_configParams.addDoubleParam("edgeSize", 30.0);
+    m_configParams.addDoubleParam("minEdgeSize", 5.0);
+    m_configParams.addDoubleParam("wallThickness", 5.0);
+    m_configParams.addDoubleParam("gridThickness", 1.0);
+    m_configParams.addDoubleParam("placeThickness", 3.0);
+    m_configParams.addDoubleParam("selectThickness", 3.0);
+  }
 
 	public void disableClick() {
 		m_clickListenerEnabled = false;
@@ -220,8 +255,15 @@ public class GameMap extends JPanel {
     m_currentDoorIsLocked = isLocked;
   }
 
+  public void setDoorParams(String keyName) {
+    m_currentDoorKeyName = keyName;
+  }
+
   public void setDefaultColor(Color defaultColor) {
     m_defaultCellColor = defaultColor;
+  }
+  public void setDefaultTexture(Texture defaultTexture) {
+    m_defaultCellTexture = defaultTexture;
   }
 
   public void start() {
@@ -231,17 +273,19 @@ public class GameMap extends JPanel {
       if (m_doors == null) {
         m_doors = new ArrayList<Door>();
       }
-      m_editMode = "cell";
+      m_editMode = "cellColor";
     	m_clickListenerEnabled = true;
       m_motionListenerEnabled = true;    	
     	addMouseListener(new MouseAdapter() { 
         public void mousePressed(MouseEvent me) {
 //           System.out.println("edit mode is " + m_editMode);
 //              System.out.println("mouse click at "+me.getX()+" "+me.getY());
-          Wall wall = null;          
+          Wall wall = null;
+          m_selectedCell = findCell(me.getX(), me.getY());
+          System.out.println("Selected cell " + m_selectedCell.getID());         
           if (m_clickListenerEnabled == true) {            
-            if (m_editMode.equals("cell")) {
-              m_selectedCell = findCell(me.getX(), me.getY()); 
+            if (m_editMode.equals("cellColor")) {
+               
               if (m_selectedCell != null) {
                 m_selectedCell.setColor(MapEditor.colorSelector.getColor(), MapEditor.colorSelector.getName());                        	
  	  	          FillCell fillCell = new FillCell(m_selectedCell);
@@ -252,33 +296,36 @@ public class GameMap extends JPanel {
                 System.out.println("No cell was selected at "+me.getX()+","+me.getY());
               }
             }
+            else if (m_editMode.equals("cellTexture")) {
+                Texture t = MapEditor.textureSelector.getSelectedTexture();
+//                System.out.println("selected texture is " + t.getName());
+                m_selectedCell.setTexture(t);
+                if (t.getName().contains("water")) {
+                  addWater(m_selectedCell);
+                }
+            }
             else if (m_editMode.equals("highlight")) {
-              m_selectedCell = findCell(me.getX(), me.getY()); 
               if (m_selectedCell != null) {
                 HighlightCell highlightCell = new HighlightCell(m_selectedCell, (float)m_configParams.getDoubleParam("selectThickness"));
                 m_frame.getContentPane().add(highlightCell);
               }
             }
             else if (m_editMode.equals("wall")) {
-
               m_selectedLine = findLine(me.getX(), me.getY());
               if (m_selectedLine != null && m_editAction != null) {                
-                m_selectedLine.setColor(MapEditor.colorSelector.getColor());
-/*                              
-                DrawLine drawLine = new DrawLine(m_selectedLine, (float)m_configParams.getDoubleParam("wallThickness"));
-                Container contentPane = m_frame.getContentPane();
-                contentPane.add(drawLine);
-*/              
+                m_selectedLine.setColor(MapEditor.colorSelector.getColor());            
                 wall = findWall(m_selectedLine);
                 System.out.println(" edit action = " + m_editAction);
                 if (wall == null && m_editAction.equals("add")) { 
                   String id = getNextWallid();
-                  wall = new Wall(id, m_selectedLine.getEndp1(), m_selectedLine.getEndp2(), m_selectedLine.getCell().getID(),
+                  wall = new Wall(id, m_selectedLine.getOuterCellDirection(), m_selectedLine.getEndp1(), 
+                                    m_selectedLine.getEndp2(), m_selectedLine.getCell(),
                                     m_currentWallHeight, m_currentWallHasRoof, m_selectedLine.getColor());
+                  wall.setOuterCell(m_selectedLine.getOuterCell());
                   addWall(wall);
+                  m_selectedLine.addWall(wall, m_gameDef);
                 }
-                else if (wall != null && m_editAction.equals("remove")) {
-                  
+                else if (wall != null && m_editAction.equals("remove")) {                  
                   String doorID = wall.getDoorID();
                   if (doorID != null) {
                     Door door = findDoor(doorID);
@@ -287,6 +334,7 @@ public class GameMap extends JPanel {
                     }
                   }
                   removeWall(wall);
+                  m_selectedLine.removeWall(wall);
                 }
               }              
               else {
@@ -309,8 +357,8 @@ public class GameMap extends JPanel {
                     if (doorDef != null && m_editAction.equals("add")) {
                       doorID = getNextDoorID();
                       Door door = new Door(doorID, doorDef, m_currentDoorIsLocked);
+                      door.setKeyName(m_currentDoorKeyName);
                       addDoor(door);
-//                    Wall wall = doorDef.getWall();
                       wall.setDoorID(door.getID());
                     }
                   }
@@ -323,6 +371,7 @@ public class GameMap extends JPanel {
                       m_selectedDoor = findDoor(doorID);
                       m_selectedDoor.toggle();
                       m_selectedDoor.setIsLocked(m_currentDoorIsLocked);
+                      m_selectedDoor.setKeyName(m_currentDoorKeyName);
                   }
                 }
                 else {
@@ -347,7 +396,7 @@ public class GameMap extends JPanel {
     	
       public void mouseDragged(MouseEvent e) {
         if (m_motionListenerEnabled == true) {
-          if (m_editMode.equals("cell")) {
+          if (m_editMode.equals("cellColor")) {
             m_selectedCell = findCell(e.getX(), e.getY()); 
             if (m_selectedCell != null) {
               m_selectedCell.setColor(MapEditor.colorSelector.getColor(), MapEditor.colorSelector.getName());
@@ -360,7 +409,7 @@ public class GameMap extends JPanel {
  //        	MapEditor.statusLabel.setText("Mouse Moved: ("+e.getX()+", "+e.getY() +")");
           if (m_motionListenerEnabled == true) {
             Container contentPane = m_frame.getContentPane(); 
-            if (m_editMode.equals("cell") || m_editMode.equals("highlight")) {         	  		       
+            if (m_editMode.equals("cellColor") || m_editMode.equals("highlight")) {         	  		       
               if (mouseOverCell != null) {
 			 	        FillCell fillCell = new FillCell(mouseOverCell);
 				        contentPane.add(fillCell);
@@ -455,6 +504,17 @@ public class GameMap extends JPanel {
     return null;
 	}
 
+  public Cell findCell(int id) {
+    if ( id >= 0 && id<m_numCells) {
+      for (Cell cell : m_cells) {
+        if (id == Integer.parseInt(cell.getID())) {
+          return cell;
+        }
+      }
+    }
+    return null;
+  }
+
   public Wall findWall(MyLine line) {
     for (Wall wall : m_walls) {
       if (wall.contains(line)) {
@@ -493,6 +553,25 @@ public class GameMap extends JPanel {
     dist = dist / Math.sqrt(dx*dx + dy*dy);
     return dist;
   }
+
+  private int[] getAdjacentCells(Cell cell) {
+    int innerCell = Integer.parseInt(cell.getID());
+    int row = innerCell/m_cellsPerRow;
+    int outerCell[] = new int[6];
+    outerCell[0] = innerCell - 2*m_cellsPerRow;
+    outerCell[1] = innerCell - m_cellsPerRow;
+    outerCell[2] = innerCell + m_cellsPerRow;
+    outerCell[3] = innerCell + 2*m_cellsPerRow;
+    outerCell[4] = innerCell + m_cellsPerRow - 1;
+    outerCell[5] = innerCell - m_cellsPerRow - 1;
+    if ( (row % 2) == 1 ) {
+       outerCell[1] += 1;
+       outerCell[2] += 1;
+       outerCell[4] += 1;
+       outerCell[5] += 1;
+    }
+    return outerCell;
+  }
   /*
       find the cell boundary segment closest to point x,y
    */
@@ -518,10 +597,13 @@ public class GameMap extends JPanel {
     vertex[4] = new MyPoint(x0, y3);
     vertex[5] = new MyPoint(xs, y2);
 
+    int[] outerCell = getAdjacentCells(cell);
+
     double minDist = 10000000; // FIXME
     MyLine minLine = null;
     int mini = 0;
     int i;
+    int outerID = 0;
     for ( i=0 ; i<6 ; i++ ) {
       int next = (i==5) ? 0 : i+1;
       MyLine line = new MyLine(vertex[i], vertex[next], cell);
@@ -530,11 +612,32 @@ public class GameMap extends JPanel {
       if (dist < minDist) {
         minDist = dist;
         minLine = line;
+        outerID = outerCell[i];
         mini = i;
       }
     }
+    System.out.println("mini segment is " + mini);
+    System.out.println("inner cell ID is " + cell.getID());
+    System.out.println("outer cell ID is " + outerID);
+    if (minLine != null) {      
+      Cell oCell = findCell(outerID);
+      minLine.setOuterCell(oCell);
+      minLine.setOuterCellDirection(mini);
+    }
 //    System.out.println("edge "+mini+" is closest");
     return minLine;
+  }
+
+  public BufferedImage getMapImage() {
+    int xb = (int)(m_edgeSize/2.0 + 0.5);
+    int yb = (int)(m_yLen/2.0 + 0.5);
+    int trimWidth = m_mapDim.getX() - 2*xb;
+    int trimHeight = m_mapDim.getY() - 2*yb;
+    BufferedImage image = new BufferedImage(m_mapDim.getX() , m_mapDim.getY(), BufferedImage.TYPE_INT_RGB);    
+    renderMap(image.getGraphics());
+    BufferedImage imageTrimmed = new BufferedImage(trimWidth ,trimHeight, BufferedImage.TYPE_INT_RGB);
+    imageTrimmed = image.getSubimage( xb, yb, trimWidth, trimHeight);
+    return imageTrimmed;
   }
 
   public GameDef getGameDef() {
@@ -561,13 +664,28 @@ public class GameMap extends JPanel {
     return m_selectedDoor;
   }
 
-  public String getNextWallid() {
-    if (m_walls == null) {
-      return "0";
+  public String getNextWaterid() {
+    m_waterID++;
+    return Integer.toString(m_waterID);
+  }
+
+  public String getNextWallid() {    
+    m_wallID++;
+    return Integer.toString(m_wallID);
+  }
+
+  // FIXME: create a base class to do this for other objects like doors, water. etc...
+  private int getMaxID(java.util.List<Wall> walls) {
+    int max = 0;
+    if (walls != null) {      
+      for (Wall wall : walls) {
+        int id = Integer.parseInt(wall.getID());
+        if (id > max) {
+          max = id;
+        }
+      }
     }
-    else {
-      return Integer.toString(m_walls.size());
-    }
+    return max;
   }
 
   public String getNextDoorID() {
@@ -605,23 +723,54 @@ public class GameMap extends JPanel {
     }
   }
 
-	public GameWrapper getGameWrapper() {
-	  MapDef mapDef = new MapDef(m_mapDim, m_configParams);       
-//    GameDef gameDef = new GameDef(mapName);
-    for (Cell cell : m_cells) {
-      CellDef cellDef = new CellDef(cell.getID(), cell.getPosition(), cell.getColor());
-      mapDef.addCell(cellDef);
-/*      
-      if (cell.getPlace() != null) {
-          System.out.println("Found place " + cell.getPlace().getPlaceName());
-          gameDef.addPlace(cell.getPlace());
+  private void addWater(Cell cell) {
+//    System.out.println("Add water for cell " + cell.getID());
+    int[] outerCell = getAdjacentCells(cell);
+    for ( int i=0 ; i<6 ; i++) {
+//      System.out.println("look for adjacent cell " + outerCell[i]);
+      Cell oCell = findCell(outerCell[i]);
+      if (oCell != null) {
+        Place place = oCell.getPlace();
+//        System.out.println("found adjacent cell " + oCell.getID());
+        if (oCell.getTexture() == null) {
+//          System.out.println("Adjacent cell does not have a texture");          
+        }
+        else {
+//          System.out.println("Adjacent cell has texture " + oCell.getTexture().getName()); 
+        }
+
+        if (place == null && (oCell.getTexture() == null || !oCell.getTexture().getName().contains("water"))) {
+//          System.out.println("Adding new place in cell " + oCell.getID() + " " + oCell);
+          place = new Place(oCell.getID(), "place" + oCell.getID());
+//          System.out.println("New place created " + place);
+          oCell.setPlace(place);
+          m_gameDef.addPlace(place);
+          place.setCell(oCell);
+        }
+        if (place != null) {
+          int reverseDirection = (i < 3) ? i+3 : i-3;
+          place.addWater(new Water(getNextWaterid(), reverseDirection));
+        } 
       }
-*/      
+    }
+  }
+
+	public GameWrapper getGameWrapper() {
+	  MapDef mapDef = new MapDef(m_mapDim, m_configParams);      
+    for (Cell cell : m_cells) {
+      CellDef cellDef = null;
+      if (cell.getTexture() != null) {
+        cellDef = new CellDef(cell.getID(), cell.getPosition(), cell.getTexture());
+      }
+      else {
+        cellDef = new CellDef(cell.getID(), cell.getPosition(), cell.getColor());
+      }
+      mapDef.addCell(cellDef);      
     }
     mapDef.setWalls(m_walls);
     mapDef.setDoors(m_doors);
     mapDef.setDefaultColor(m_defaultCellColor);
-//    GameWrapper gameWrapper = new GameWrapper(gameDef, mapDef);
+    mapDef.setDefaultTexture(m_defaultCellTexture);
     GameWrapper gameWrapper = new GameWrapper(m_gameDef, mapDef);
 		return gameWrapper;
 	}
@@ -669,38 +818,70 @@ public class GameMap extends JPanel {
       }
       return borderColor;
   }
-	public void paintComponent(Graphics g) {
-		super.paintComponent(g);	
-    Graphics2D g2 = (Graphics2D) g; 	
-		for (Cell cell : m_cells) {
+  private void renderMap(Graphics g) {
+    Graphics2D g2 = (Graphics2D) g;   
+    for (Cell cell : m_cells) {      
       Color cellColor = cell.getColor();
+      Texture cellTexture = cell.getTexture();
+                       
       if (cellColor == null) {
-        if (m_defaultCellColor == null) {
-          cellColor = Color.white;
-
+        if (m_defaultCellTexture == null) {
+          if (m_defaultCellColor == null) {
+              cellColor = Color.white;
+          }
+          else {
+              cellColor = m_defaultCellColor;
+          }
         }
-        else {
-          cellColor = m_defaultCellColor;
+        else if (cellTexture == null) {
+            cellTexture = m_defaultCellTexture;
         }
-      }     
-			g2.setColor(cellColor);
-			g2.fillPolygon(cell.getHexagon());           
+      }
+      if (cellTexture != null) {
+          g2.setClip(cell.getHexagon());
+          TexturePaint tp = new TexturePaint(cellTexture.getImage(), cell.getHexagon().getBounds());
+          g2.setPaint(tp);
+          g2.fill(cell.getHexagon().getBounds());
+          g2.setClip(null);
+      } 
+      else {    
+         g2.setColor(cellColor);
+         g2.fillPolygon(cell.getHexagon());
+      }           
       g2.setColor(getBorderColor(cellColor));
       g2.setStroke(new BasicStroke((float)m_configParams.getDoubleParam("gridThickness")));
-      g2.drawPolygon(cell.getHexagon());	
-      if (m_viewMode.equals("all") && cell.getPlace() != null) {			 
-        g2.setStroke(new BasicStroke((float)m_configParams.getDoubleParam("gridThickness")));
-//        g2.drawPolygon(cell.getHexagon());
-        cell.getPlace().getCrossPattern().draw(g2);
+       
+      if (m_viewMode.equals("all")) { 
+        g2.drawPolygon(cell.getHexagon());
+        if (cell.getPlace() != null && cell.getPlace().getCrossPattern() != null) {     
+          g2.setStroke(new BasicStroke((float)m_configParams.getDoubleParam("gridThickness")));          
+          cell.getPlace().getCrossPattern().draw(g2);
+        }
       }
-		}
+    }
     if (m_walls != null) {
       g2.setStroke(new BasicStroke((float)m_configParams.getDoubleParam("wallThickness")));
       for (Wall wall : m_walls) {
         g2.setColor(wall.getColor());      
         g2.drawLine(wall.getEndp1().getX(), wall.getEndp1().getY(), wall.getEndp2().getX(), wall.getEndp2().getY());
+/*        
+        g2.setColor(Color.red);
+        Cell ic =  wall.getCell();   
+        getCrossPattern(ic.getPosition()).draw(g2);
+        g2.setColor(Color.cyan);
+        Cell oc = wall.getOuterCell();
+        if (oc != null) {   
+          getCrossPattern(oc.getPosition()).draw(g2);
+        }
+ */       
       }
     }
+  }
+
+	public void paintComponent(Graphics g) {
+		super.paintComponent(g);	
+    Graphics2D g2 = (Graphics2D) g;
+    renderMap(g);
 
     if (m_viewMode.equals("game")) {
       return;
@@ -717,7 +898,7 @@ public class GameMap extends JPanel {
     if (m_selectedCell != null) {
       g2.setColor(getBorderColor(m_selectedCell.getColor()));
       g2.drawPolygon(m_selectedCell.getHexagon());
-      if (m_selectedCell.getPlace() != null) {
+      if (m_selectedCell.getPlace() != null && m_selectedCell.getPlace().getCrossPattern() != null) {
         m_selectedCell.getPlace().getCrossPattern().draw(g2);
       }
     }

@@ -8,17 +8,21 @@ import java.util.*;
 
 public class Place {
 	private String placeName;
-	private String className;		
+	private String className;
+	private String desc;		
 	private List<Prop> props;
 	private String id;
 	private CrossPattern crossPattern;
 	private List<Player> players;
 	private List<Item> items;
+	private List<Wall> walls;
+	private List<Water> water;
+	private Cell cell;
 
 	public Place(String id, String name) {
 		this.id = id;
 		placeName = name;
-		className = "cooperation.PositionState";
+		className = "coop.map.Place";
 	}
 
 	public Place(String line) {
@@ -70,6 +74,40 @@ public class Place {
 				}
 			}
 		}
+	}
+
+	public void setCell(Cell cell) {
+		this.cell = cell;
+	}
+
+	public Cell getCell() {
+		return cell;
+	}
+
+	public void addWall(Wall wall) {
+		if (walls == null) {
+			walls = new ArrayList<Wall>();
+		}
+		walls.add(wall);
+	}
+
+	public void removeWall(Wall wall) {
+		walls.remove(wall);
+	}
+
+	public List<Wall> getWalls() {
+		return walls;
+	}
+
+	public List<Water> getWater() {
+		return water;
+	}
+
+	public void addWater(Water w) {
+		if (water == null) {
+			water = new ArrayList<Water>();
+		}
+		water.add(w);
 	}
 
 	public void addItem(Item item) {
@@ -147,6 +185,7 @@ public class Place {
 	}
 
 	public String getDesc() {
+/*		
 		for (Prop prop : props) {
 			if (prop.getName().equals("desc")) {			
 				ValueProp vprop = (ValueProp)prop;
@@ -154,15 +193,20 @@ public class Place {
 			}
 		}
 		return null;
+*/		
+		return desc;		
 	}
 
 	public void setDesc(String desc) {
+/*		
 		for (Prop prop : props) {
 			if (prop.getName().equals("desc")) {			
 				ValueProp vprop = (ValueProp)prop;
 				vprop.setValue(desc);
 			}
-		}		
+		}	
+*/
+		this.desc = desc;			
 	}
 
 	public String getMouseOverInfo() {
@@ -185,6 +229,9 @@ public class Place {
 	public String toString() {		
 		StringBuilder sb = new StringBuilder(100);
 		sb.append("place" + id + ":" + placeName + "," + className);
+		sb.append("#vprop#" + desc);
+	
+/*		
 		for (Prop prop : getProps()) {
 			if (prop instanceof ValueProp) {
         		ValueProp vprop = (ValueProp)prop;
@@ -199,6 +246,7 @@ public class Place {
         		sb.append("#actions#" + actions.toString());
         	}
 		}
+*/		
 		return sb.toString();
 	}
 

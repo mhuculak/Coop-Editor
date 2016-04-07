@@ -1,15 +1,24 @@
 package coop.map;
 
+import coop.mapeditor.MapEditor;
+
 import java.awt.*;
 
 public class CellDef {
 	private MyPoint position;
 	private Color color;
+	private Texture texture;	
 	private String id;
 
 	public CellDef(String id, MyPoint pos, Color color) {
 		this.position = pos;
 		this.color = color;
+		this.id = id;
+	}
+
+	public CellDef(String id, MyPoint pos, Texture texture) {
+		this.position = pos;
+		this.texture = texture;
 		this.id = id;
 	}
 
@@ -19,26 +28,34 @@ public class CellDef {
 		id = type.replaceAll("\\D+","");
 		line = type_data[1];
 //		System.out.println("parse:" + line);
-		String[] pos_color = line.split("#");
+		String[] pos_content = line.split("#");
 //		System.out.println("parse:" + pos_color[0]);
-		String[] p = pos_color[0].split(",");
+		String[] p = pos_content[0].split(",");
 		position = new MyPoint(Integer.parseInt(p[0]), Integer.parseInt(p[1]));
-//		System.out.println("parse:" + pos_color[1]);
-		if (pos_color.length == 2) {
-			String[] c = pos_color[1].split(",");
-			color = new Color(Integer.parseInt(c[0]), Integer.parseInt(c[1]), Integer.parseInt(c[2])); // RGB
+		
+		if (pos_content.length == 2) {
+			System.out.println("parse:" + pos_content[1]);
+			String[] c = pos_content[1].split(",");
+			if (c.length==3) {
+				color = new Color(Integer.parseInt(c[0]), Integer.parseInt(c[1]), Integer.parseInt(c[2])); // RGB
+			}
+			else {
+				texture = MapEditor.textureSelector.getTexture(pos_content[1]);
+			}
 		}
 	}
 
 	public String toString() {
-		String v = null;
-		if (color == null) {
-			v =  "cell" + id + ":" + position.getX() + "," + position.getY();
+		StringBuilder sb = new StringBuilder();
+		sb.append("cell" + id + ":" + position.getX() + "," + position.getY());
+		if (texture != null) {
+			sb.append("#" + texture.getName());
 		}
-		else {
-			v =  "cell" + id + ":" + position.getX() + "," + position.getY() + "#" + color.getRed() + "," + color.getGreen() + "," + color.getBlue();
+		else if (color != null) {
+			sb.append("#" + color.getRed() + "," + color.getGreen() + "," + color.getBlue());
 		}
-		return v;
+		
+		return sb.toString();
 	} 
 
 	public MyPoint getPosition() {
@@ -47,6 +64,10 @@ public class CellDef {
 
 	public Color getColor() {
 		return color;
+	}
+
+	public Texture getTexture() {
+		return texture;
 	}
 
 	public String getID() {

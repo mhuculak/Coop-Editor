@@ -69,6 +69,10 @@ public class ColorSelector extends JPanel {
     	return selectedColor;
     }
 
+    public void setVisible(boolean isVisible) {
+        frame.setVisible(isVisible);
+    }
+
     public void addColor(String name, Color color) {
       colors.put(name, color);
       addButton(name, color);

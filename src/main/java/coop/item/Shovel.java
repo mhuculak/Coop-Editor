@@ -13,5 +13,6 @@ public class Shovel extends ActionItem {
 	private void init() {
 		setType("shovel");
 		addAction("dig");
+		setWeight(3.0);
 	}
 }

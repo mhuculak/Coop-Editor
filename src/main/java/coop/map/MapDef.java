@@ -1,6 +1,7 @@
 package coop.map;
 
 import coop.util.ConfigParams;
+import coop.mapeditor.MapEditor;
 
 import java.util.*;
 import java.awt.*;
@@ -12,6 +13,7 @@ public class MapDef {
 	private java.util.List<Wall> walls;
 	private java.util.List<Door> doors;
 	private Color defaultColor;
+	private Texture defaultTexture;
 
 	public MapDef() {
 
@@ -52,14 +54,17 @@ public class MapDef {
 		else if (type.contains("cell")) {
 			addCell(new CellDef(line));
 		}
-		else if (type.contains("wall")) {
-			addWall(new Wall(line));
+		else if (type.contains("obstacle")) {
+			addWall(new Wall(line)); // FIXME: if we want obstacles other than walls we need to read the class like we do when parsing items
 		}
 		else if (type.contains("door")) {
 			addDoor(new Door(line));
 		}
 		else if (type.contains("defaultColor")) {
 			setDefaultColor(line);
+		}
+		else if (type.contains("defaultTexture")) {
+			setDefaultTexture(line);
 		}
 	}
 
@@ -85,6 +90,10 @@ public class MapDef {
 		defaultColor = color;
 	}
 
+	public void setDefaultTexture(Texture texture) {
+		defaultTexture = texture;
+	}
+
 	public void setDoors(java.util.List<Door> doors) {
 		this.doors = doors;
 	}
@@ -96,8 +105,18 @@ public class MapDef {
         defaultColor = new Color(Integer.parseInt(c[0]), Integer.parseInt(c[1]), Integer.parseInt(c[2])); 		
 	}
 
+	public void setDefaultTexture(String line) {
+		String[] name_texture = line.split(":");
+		String textureName = name_texture[1];
+		defaultTexture = MapEditor.textureSelector.getTexture(textureName);
+	}
+
 	public Color getDefaultColor() {
 		return defaultColor;
+	}
+
+	public Texture getDefaultTexture() {
+		return defaultTexture;
 	}
 
 	public void addCell(CellDef cell) {
@@ -125,5 +144,14 @@ public class MapDef {
 
 	public ConfigParams getConfigParams() {
 		return configParams;
+	}
+
+	public void resolve(GameDef gameDef) {
+		if (walls != null) {
+			for (Wall wall : walls) {
+				Place place = gameDef.getPlace(wall.getCellID());
+				place.addWall(wall);
+			}
+		}
 	}
 }

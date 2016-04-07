@@ -9,7 +9,11 @@ import java.awt.*;
 import java.awt.event.*;
 import javax.swing.*;
 import java.util.*;
+import java.io.*;
 import java.lang.reflect.*;
+import java.awt.image.*;
+import javax.imageio.ImageIO;
+import java.awt.geom.AffineTransform;
 
 public class MapEditor {
 	private JFrame mainFrame;	      
@@ -21,6 +25,7 @@ public class MapEditor {
    	private MyPoint mapDim = null;
    	private GameMap map = null;
    	public static ColorSelector colorSelector = null;
+    public static TextureSelector textureSelector = null;
    	private String mapFileName = null;
    	private String mapName = null;   
 
@@ -45,7 +50,9 @@ public class MapEditor {
 
    	private void start() {
       itemWrapper = new ItemWrapper();      
-   		setupMenus(); 
+   		setupMenus();
+      textureSelector = new TextureSelector();
+      textureSelector.start();
    		colorSelector.start();         		
       mainFrame.setVisible(true); 
    	}
@@ -92,8 +99,7 @@ public class MapEditor {
       GameWrapper gameWrapper = map.getGameWrapper();
    		Log("Saving to file " + mapFileName);   		
    		MapFile.writeMapFile(mapFileName, gameWrapper);
-   		Log("Saving game info to " + gameWrapper.getGameDef().getName());
-   		GameFile.saveToXML(gameWrapper.getGameDef());
+   		
       colorSelector.save();
    	}
 
@@ -118,13 +124,147 @@ public class MapEditor {
         
    	}
 
+    private void export() {
+      GameWrapper gameWrapper = map.getGameWrapper();
+      map.setViewMode("game");
+      BufferedImage mapImage = map.getMapImage();
+      String[] comp = mapName.split("\\.");
+      String basename = comp[0];
+      String path = "export/" + basename + ".jpg";
+      Log("Writing map to " + path);
+      try {
+            File out = new File(path);
+            ImageIO.write( mapImage , "jpg", out);            
+          }
+          catch(Exception e) {
+            e.printStackTrace();            
+          }
+//      TheMist mist = new TheMist(mapDim);
+      MyPoint mistDim = new MyPoint(500, 500);
+      TheMist mist = new TheMist(mistDim);
+      mist.save("export/" + basename + "_mist.png");     
+      Log("Saving game info to " + gameWrapper.getGameDef().getName());
+      GameFile.saveToXML(gameWrapper.getGameDef(), gameWrapper.getMapDef());
+      map.setViewMode("all");
+    }
+
+
+    private void newMap() {
+      cleanup(true);
+      JFrame dialogFrame = new JFrame("New Map");     
+      dialogFrame.setLayout(new GridLayout(4, 1));
+      dialogFrame.setSize(400, 400);
+      
+      JPanel controlPanel1 = new JPanel(new FlowLayout());
+      JPanel controlPanel2 = new JPanel(new FlowLayout());
+      JPanel controlPanel3 = new JPanel(new FlowLayout());
+      JPanel controlPanel4 = new JPanel(new FlowLayout());
+      dialogFrame.add(controlPanel1);
+      dialogFrame.add(controlPanel2);
+      dialogFrame.add(controlPanel3);
+      dialogFrame.add(controlPanel4);
+      dialogFrame.setVisible(true); 
+
+      JLabel nameLabel = new JLabel("Map Name: ", JLabel.RIGHT);
+      JLabel xLabel= new JLabel("X size: ", JLabel.RIGHT);
+      JLabel yLabel = new JLabel("Y size: ", JLabel.RIGHT);
+      JLabel edgeLabel = new JLabel("Edge size: ", JLabel.RIGHT);
+
+        final TextField nameText = new TextField(20);
+        nameText.setText("testmap");
+        final TextField xText = new TextField(6);
+        xText.setText("1000"); 
+        final TextField yText = new TextField(6);
+        yText.setText("1000");
+        final TextField edgeText = new TextField(6);
+        edgeText.setText("30");        
+
+        Button doneButton = new Button("Done");        
+
+        doneButton.addActionListener(new ActionListener() {
+          public void actionPerformed(ActionEvent e) {     
+              mapFileName = nameText.getText();
+              mapName = nameText.getText();
+                          
+              if (mapFileName == null) {return;}
+              if (xText.getText()==null || !xText.getText().matches("\\d+")) {
+                Log("validation failed for x");
+                return;
+              }
+              if (yText.getText()==null || !yText.getText().matches("\\d+")) {return;}
+              Log("Create new map " + mapFileName + " size " + xText.getText() + " x " + yText.getText());
+              mapFrame = new JFrame(mapFileName);
+              mapFileName = checkExtension(mapFileName);
+              mapDim = new MyPoint(xText.getText(), yText.getText());
+              mapFrame.setSize(mapDim.getX(), mapDim.getY());
+              double edgeSize = Double.parseDouble(edgeText.getText());
+              map = new GameMap(mapFrame, mapDim, edgeSize);
+              Container contentPane = mapFrame.getContentPane();
+              contentPane.add(map);
+              mapFrame.setVisible(true);
+              dialogFrame.dispatchEvent(new WindowEvent(dialogFrame, WindowEvent.WINDOW_CLOSING));
+          }
+        });
+
+        
+
+        controlPanel1.add(nameLabel);
+        controlPanel1.add(nameText);
+        controlPanel2.add(xLabel);       
+        controlPanel2.add(xText);
+        controlPanel2.add(yLabel);       
+        controlPanel2.add(yText);
+        controlPanel3.add(edgeLabel);       
+        controlPanel3.add(edgeText);
+        controlPanel4.add(doneButton);   
+        dialogFrame.setVisible(true);   
+
+    }
+
+
 	  private void editCells() {	
-		  colorFrame.setVisible(true);
+//		  colorFrame.setVisible(true);
       if (map == null) {
         Log("ERROR: No map available");
       }
       else {
-        map.setEditMode("cell");
+        JFrame dialogFrame = new JFrame("Edit Cells");
+        dialogFrame.setLayout(new GridLayout(4, 1));
+        dialogFrame.setSize(400, 400);
+        JLabel instructionLabel = new JLabel("Select the mode used to edit cell contents",  JLabel.CENTER);
+        dialogFrame.add(instructionLabel); 
+        JCheckBox colorCheckBox = new JCheckBox("Color Mode");
+        JCheckBox textureCheckBox = new JCheckBox("Texture Mode");
+        JPanel colorPanel = new JPanel();
+        JPanel texturePanel = new JPanel();
+        colorPanel.setLayout(new FlowLayout());
+        texturePanel.setLayout(new FlowLayout());
+        colorPanel.add(colorCheckBox);
+        texturePanel.add(textureCheckBox);
+        dialogFrame.add(colorPanel);
+        dialogFrame.add(texturePanel);
+        Button okButton = new Button("Ok");
+        JPanel buttonPanel = new JPanel();
+        buttonPanel.setLayout(new FlowLayout());
+        buttonPanel.add(okButton);
+        dialogFrame.add(buttonPanel);
+        dialogFrame.setVisible(true);
+
+        okButton.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                if (colorCheckBox.isSelected()) {
+                    map.setEditMode("cellColor");
+                    colorSelector.setVisible(true);
+                }
+                else if (textureCheckBox.isSelected()) {
+                    map.setEditMode("cellTexture");
+                    textureSelector.setVisible(true);
+                }
+                dialogFrame.dispatchEvent(new WindowEvent(dialogFrame, WindowEvent.WINDOW_CLOSING));
+            }              
+        });
+
+        
         map.enableClick();
         map.enableMotion();
       }
@@ -140,6 +280,8 @@ public class MapEditor {
       JFrame dialogFrame = new JFrame("Edits Walls"); 
       dialogFrame.setLayout(new GridLayout(4, 1));
       dialogFrame.setSize(400, 400);
+      JLabel keyNameLabel = new JLabel("Key Name:");
+      final TextField keyNameText = new TextField(10);
       JCheckBox lockedCheck = new JCheckBox("door is locked");
       Button addButton = new Button("Add");
       Button modifyButton = new Button("Modify");
@@ -147,6 +289,8 @@ public class MapEditor {
       JPanel controlPanel1 = new JPanel(new FlowLayout());
       JPanel controlPanel2 = new JPanel(new FlowLayout());
       controlPanel1.add(lockedCheck);
+      controlPanel1.add(keyNameLabel);
+      controlPanel1.add(keyNameText);
       controlPanel2.add(addButton);
       controlPanel2.add(modifyButton);
       controlPanel2.add(removeButton);
@@ -158,6 +302,7 @@ public class MapEditor {
           public void actionPerformed(ActionEvent e) {
             map.setEditAction("add");             
             map.setDoorParams(lockedCheck.isSelected());
+            map.setDoorParams(keyNameText.getText()); 
             dialogFrame.dispatchEvent(new WindowEvent(dialogFrame, WindowEvent.WINDOW_CLOSING));
           }
       });
@@ -165,7 +310,8 @@ public class MapEditor {
       modifyButton.addActionListener(new ActionListener() {
           public void actionPerformed(ActionEvent e) {           
             map.setEditAction("modify");
-            map.setDoorParams(lockedCheck.isSelected());   
+            map.setDoorParams(lockedCheck.isSelected());
+            map.setDoorParams(keyNameText.getText()); 
             dialogFrame.dispatchEvent(new WindowEvent(dialogFrame, WindowEvent.WINDOW_CLOSING));                      
           }
       }); 
@@ -264,101 +410,307 @@ public class MapEditor {
 
     }
 
+
+
+    private void pickTexture() {
+      JFrame dialogFrame = new JFrame("Pick Texture");     
+      dialogFrame.setLayout(new GridLayout(2, 1));
+      dialogFrame.setSize(400, 400);
+      JLabel instructionLabel = new JLabel("Select the texture to edit", JLabel.CENTER);
+      Button submitButton = new Button("Ok");
+      JPanel buttonControlPanel = new JPanel();
+      buttonControlPanel.setLayout(new FlowLayout());
+      buttonControlPanel.add(submitButton);
+      dialogFrame.add(instructionLabel);
+      dialogFrame.add(buttonControlPanel);
+      dialogFrame.setVisible(true);
+      textureSelector.setVisible(true);
+
+      submitButton.addActionListener(new ActionListener() {
+          public void actionPerformed(ActionEvent e) {
+              Texture selectedTexture = textureSelector.getSelectedTexture();
+              if (selectedTexture != null) {
+                  editTexture(selectedTexture);
+                  dialogFrame.dispatchEvent(new WindowEvent(dialogFrame, WindowEvent.WINDOW_CLOSING));
+              } 
+          }              
+      });
+  
+    }
+
+    private void editTexture(Texture texture) {
+        JFrame dialogFrame = new JFrame("Create New Texture");
+        JFrame imageFrame = new JFrame("Edit Texture");
+          
+        dialogFrame.setLayout(new GridLayout(4, 1));
+        dialogFrame.setSize(400, 400);
+        JLabel instructionLabel = new JLabel("Use the mouse to scale and rotate", JLabel.CENTER);
+        JLabel nameLabel = new JLabel("Name of New Texture:", JLabel.RIGHT);
+        final TextField nameText = new TextField(10);
+        JPanel namePanel = new JPanel(new FlowLayout());
+        namePanel.add(nameLabel);
+        namePanel.add(nameText);
+        TextureEdit textureEdit = new TextureEdit(imageFrame, texture.getImage());       
+        Button submitButton = new Button("Done");
+        Button cancelButton = new Button("Cancel");
+        Button resetButton = new Button("Reset");
+        JPanel buttonControlPanel = new JPanel();
+        buttonControlPanel.add(submitButton);
+        buttonControlPanel.add(cancelButton);
+        buttonControlPanel.add(resetButton);
+        
+        dialogFrame.add(instructionLabel);
+        dialogFrame.add(namePanel);
+        
+        dialogFrame.add(buttonControlPanel);
+        dialogFrame.setVisible(true);
+
+        imageFrame.getContentPane().add(textureEdit);        
+        
+        submitButton.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+              System.out.println("Submit button pressed");
+              Texture newTexture = new Texture( nameText.getText(), textureEdit.getImage());
+              if (textureSelector.addTexture(newTexture)) {
+                    Log("Texture " + newTexture.getName() + " Saved");
+                    imageFrame.dispatchEvent(new WindowEvent(imageFrame, WindowEvent.WINDOW_CLOSING)); 
+                    dialogFrame.dispatchEvent(new WindowEvent(dialogFrame, WindowEvent.WINDOW_CLOSING));  
+              } 
+              else {
+                    Log("Failed to save " + texture.getName() );
+              }
+                           
+            }              
+        });
+
+        resetButton.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                imageFrame.dispatchEvent(new WindowEvent(imageFrame, WindowEvent.WINDOW_CLOSING)); 
+                JFrame imageFrame = new JFrame("Edit Texture");                
+                TextureEdit textureEdit = new TextureEdit(imageFrame, texture.getImage());
+                imageFrame.getContentPane().add(textureEdit);                           
+            }              
+        });
+
+        cancelButton.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                imageFrame.dispatchEvent(new WindowEvent(imageFrame, WindowEvent.WINDOW_CLOSING)); 
+                dialogFrame.dispatchEvent(new WindowEvent(dialogFrame, WindowEvent.WINDOW_CLOSING));             
+            }              
+        });
+    }
+
+    class TextureEdit extends JPanel {
+        private BufferedImage image;
+        private Rectangle imageBox;
+        private JFrame frame;
+        private int x0;
+        private int y0;
+        private int xs;
+        private int ys;
+        private int xf;
+        private int yf;
+        private int x1;
+        private int y1;
+       
+        MyPoint p2 = null;        
+
+        public TextureEdit(JFrame frame, BufferedImage img) {            
+            image = img;
+            x0 = 100;
+            y0 = 100;
+            xs = x0;
+            ys = y0;
+            xf = x0 + img.getWidth();
+            yf = y0 + img.getHeight();
+//            System.out.println("ctor image is " + img.toString());
+            imageBox = new Rectangle(xs, xs, xf, yf);
+            frame.setSize(400,400);
+            frame.setVisible(true);  
+
+            addMouseListener(new MouseAdapter() { 
+       
+                public void mousePressed(MouseEvent me) {
+//                    System.out.println("Pressed: " + me.getX() + " " + me.getY());
+                    x1 =  me.getX();
+                    y1 = me.getY();
+                    p2 = null;
+                }
+                       
+                public void mouseReleased(MouseEvent me) {
+                    System.out.println("Released: " + me.getX() + " " + me.getY());
+                    System.out.println("Image is " + imageBox.toString());
+                    p2 = new MyPoint(me.getX(), me.getY());
+                    Point p = new Point(me.getX(), me.getY());                    
+                    
+                    if (insideImage(x1,y1)) {
+//                      System.out.println("mouse was pressed inside the image");
+                        if (!insideImage( me.getX(), me.getY())) {                       
+//                            image = scale(image, 1.2, 1.0);
+                            image = scale(image, 2.0, 1.0);
+                            System.out.println("scaled up image is " + image.toString());
+                        }
+                    }
+                    else {
+//                        System.out.println("mouse was pressed outside the image");
+                        if (insideImage( me.getX(), me.getY())) {
+                            image = scale(image, 0.5, 1.0);
+                            System.out.println("scaled down image is " + image.toString());
+                        }
+                        else {
+                            double angle = getRotation();
+                            image = rotate(image, angle);
+                            System.out.println("rotated image is " + image.toString());  
+                        }
+                    }
+                    updateUI();
+                    frame.setVisible(true);                                    
+                }        
+                         
+            });
+        }
+
+        private boolean insideImage(int x, int y) {            
+            if ( x>xf || x<xs || y>yf || y<ys) {
+                return false;
+            }
+            else {
+                return true;
+            }
+        }
+
+        public BufferedImage getImage() {            
+            return image;
+        }
+
+        private int getDotProduct(MyPoint v1, MyPoint v2) {
+            return v1.getX() * v2.getX() + v1.getY() * v2.getY();
+        }
+
+        private double getRotation() {
+                        
+            int dx = x1-x0;
+            int dy = y1-y0;
+            double mag1 = Math.sqrt( dx*dx + dy*dy);
+            MyPoint v1 = new MyPoint( dx, dy);
+            dx = p2.getX() - x0;
+            dy = p2.getY() - y0;
+            double mag2 = Math.sqrt( dx*dx + dy*dy);
+            double m12 = mag1*mag2;
+            if (m12 == 0.0) {
+                return 0;
+            }
+            MyPoint v2 = new MyPoint( dx, dy);
+            int dotp = getDotProduct(v1, v2);            
+           
+            double rotation = Math.acos(dotp/m12);
+            System.out.println("Rotation is " + rotation + " rad " + Math.toDegrees(rotation) + " deg");
+
+            return rotation;            
+        }
+
+        private BufferedImage scale(BufferedImage img, double textureScale, double imageScale) {
+            int newWidth = (int)(imageScale*img.getWidth()+0.5);
+            int newHeight = (int)(imageScale*img.getHeight()+0.5);
+            int textureWidth = (int)(textureScale*img.getWidth()+0.5);
+            int textureHeight = (int)(textureScale*img.getHeight()+0.5);
+            BufferedImage newImage = new BufferedImage(newWidth,newHeight,BufferedImage.TYPE_INT_RGB);
+            Rectangle boxTexture = new Rectangle(0,0,textureWidth,textureHeight);
+            Rectangle boxOut = new Rectangle(0,0,newWidth,newHeight);
+            Graphics2D g2 = (Graphics2D)newImage.getGraphics();
+            TexturePaint tp = new TexturePaint(img, boxTexture);
+            g2.setPaint(tp);
+            g2.fill(boxOut); 
+            return newImage;
+        }
+
+        private BufferedImage rotate(BufferedImage img, double angle) {
+            BufferedImage biggerImage = scale(image, 1.0, 2.0);
+            BufferedImage newImage = new BufferedImage(biggerImage.getWidth() , biggerImage.getHeight(),BufferedImage.TYPE_INT_RGB);
+            Graphics2D g2 = (Graphics2D)newImage.getGraphics();            
+            AffineTransform transform = new AffineTransform();
+            transform.setToTranslation((newImage.getWidth() - biggerImage.getWidth())/ 2, 
+                                          (newImage.getHeight() - biggerImage.getHeight())/ 2);
+            transform.rotate( angle, biggerImage.getWidth()/2, biggerImage.getHeight()/2);
+            g2.drawImage( biggerImage, transform, this);
+            int w = image.getWidth();
+            int h = image.getHeight();
+            BufferedImage cropImage = newImage.getSubimage( w/2, h/2, w, h);
+            return cropImage; 
+        }
+
+        public void paintComponent(Graphics g) {
+            Graphics2D g2 = (Graphics2D) g;
+//            System.out.println("Display image " + image.toString());                       
+            g2.drawImage( image, 100, 100, null);         
+
+        }     
+    }
+
     private void editItem() {
 
     }
 
-    private void pickDefaultColor() {
-      colorFrame.setVisible(true);
-      JFrame dialogFrame = new JFrame("Default Color");
-      dialogFrame.setLayout(new GridLayout(2, 1));
-      JLabel instructionLabel = new JLabel("Select the default color from the color selector window");
+    private void pickDefaultCell() {
+      
+      JFrame dialogFrame = new JFrame("Default Cell");
+      dialogFrame.setLayout(new GridLayout(4, 1));
+      JLabel instructionLabel = new JLabel("Select which type of default you want and select the default value");
+      JCheckBox colorCheckBox = new JCheckBox("Default Color");
+      JCheckBox textureCheckBox = new JCheckBox("Default Texture");
+      JPanel colorPanel = new JPanel();
+      JPanel texturePanel = new JPanel();
+      colorPanel.setLayout(new FlowLayout());
+      colorPanel.add(colorCheckBox);    
+      texturePanel.setLayout(new FlowLayout());
+      texturePanel.add(textureCheckBox);
       Button doneButton = new Button("Done");
-      JPanel controlPanel = new JPanel(new FlowLayout());
-      controlPanel.add(doneButton);
+      JPanel buttonPanel = new JPanel(new FlowLayout());
+      buttonPanel.add(doneButton);
       dialogFrame.add(instructionLabel);
-      dialogFrame.add(controlPanel);
+      dialogFrame.add(colorPanel);
+      dialogFrame.add(texturePanel);
+      dialogFrame.add(buttonPanel);
       dialogFrame.setSize(400, 400);
       dialogFrame.setVisible(true);
 
+      colorCheckBox.addActionListener(new ActionListener() {
+          public void actionPerformed(ActionEvent e) {
+              colorSelector.setVisible(true);
+          }
+      });
+
+      textureCheckBox.addActionListener(new ActionListener() {
+          public void actionPerformed(ActionEvent e) {
+              textureSelector.setVisible(true);
+          }
+      });
+
       doneButton.addActionListener(new ActionListener() {
           public void actionPerformed(ActionEvent e) {
-            Color defaultColor = colorSelector.getColor();
-            if (defaultColor == null) {
-              Log("ERROR: No color selected");
+            if (colorCheckBox.isSelected()) {
+                Color defaultColor = colorSelector.getColor();
+                if (defaultColor == null) {
+                    Log("ERROR: No color selected");
+                }
+                else {
+                    map.setDefaultColor(defaultColor);
+                }
             }
-            else {
-              map.setDefaultColor(defaultColor);
-          }       
+            else if (textureCheckBox.isSelected()) {
+                Texture defaultTexture = textureSelector.getSelectedTexture();
+                if (defaultTexture == null) {
+                    Log("ERROR: No texture selected");
+                }
+                else {
+                    map.setDefaultTexture(defaultTexture);
+                }
+            }      
             dialogFrame.dispatchEvent(new WindowEvent(dialogFrame, WindowEvent.WINDOW_CLOSING));         
           }
       });
      
     }
-
-   	private void newMap() {
-   		cleanup(true);
-   		JFrame dialogFrame = new JFrame("New Map");  		
-   		dialogFrame.setLayout(new GridLayout(3, 1));
-   		dialogFrame.setSize(400, 400);
-   		
-   		JPanel controlPanel1 = new JPanel(new FlowLayout());
-   		JPanel controlPanel2 = new JPanel(new FlowLayout());
-   		JPanel controlPanel3 = new JPanel(new FlowLayout());
-   		dialogFrame.add(controlPanel1);
-   		dialogFrame.add(controlPanel2);
-   		dialogFrame.add(controlPanel3);
-      dialogFrame.setVisible(true); 
-
-   		JLabel nameLabel = new JLabel("Map Name: ", JLabel.RIGHT);
-   		JLabel xLabel= new JLabel("X size: ", JLabel.RIGHT);
-      JLabel yLabel = new JLabel("Y size: ", JLabel.RIGHT);
-
-      	final TextField nameText = new TextField(20);
-      	nameText.setText("testmap");
-        final TextField xText = new TextField(6);
-        xText.setText("1000"); 
-        final TextField yText = new TextField(6);
-        yText.setText("1000"); 
-
-        Button doneButton = new Button("Done");        
-
-        doneButton.addActionListener(new ActionListener() {
-         	public void actionPerformed(ActionEvent e) {     
-            	mapFileName = nameText.getText();
-            	mapName = nameText.getText();
-             	      			
-             	if (mapFileName == null) {return;}
-             	if (xText.getText()==null || !xText.getText().matches("\\d+")) {
-             		Log("validation failed for x");
-             		return;
-             	}
-             	if (yText.getText()==null || !yText.getText().matches("\\d+")) {return;}
-             	Log("Create new map " + mapFileName + " size " + xText.getText() + " x " + yText.getText());
-             	mapFrame = new JFrame(mapFileName);
-             	mapFileName = checkExtension(mapFileName);
-             	mapDim = new MyPoint(xText.getText(), yText.getText());
-                mapFrame.setSize(mapDim.getX(), mapDim.getY());
-                map = new GameMap(mapFrame, mapDim);
-                Container contentPane = mapFrame.getContentPane();
-      			contentPane.add(map);
-      			mapFrame.setVisible(true);
-      			dialogFrame.dispatchEvent(new WindowEvent(dialogFrame, WindowEvent.WINDOW_CLOSING));
-         	}
-      	});
-
-        
-
-      	controlPanel1.add(nameLabel);
-      	controlPanel1.add(nameText);
-      	controlPanel2.add(xLabel);       
-      	controlPanel2.add(xText);
-      	controlPanel2.add(yLabel);       
-      	controlPanel2.add(yText);
-      	controlPanel3.add(doneButton);   
-      	dialogFrame.setVisible(true);   
-
-   	}
 
     private void setViewMode() {
       JFrame dialogFrame = new JFrame("View Mode");
@@ -389,7 +741,7 @@ public class MapEditor {
       });
     }
 
-   	private void gamePlace() { 
+   	private void gamePlace() {  
    	  JFrame dialogFrame = new JFrame("Description");  		
    		dialogFrame.setLayout(new GridLayout(2, 1));
    		dialogFrame.setSize(400, 400);
@@ -432,18 +784,22 @@ public class MapEditor {
             else {
          		  Place place = selectedCell.getPlace();
          		  if (place == null) { // create a new Place in a free cell
-         			    place = new Place(selectedCell.getID(), nameText.getText());         			
+         			    place = new Place(selectedCell.getID(), nameText.getText());
+/*                           			
          			    ValueProp xpos = new ValueProp("xpos");
          			    xpos.setValue(Integer.toString(selectedCell.getPosition().getX()));
          			    place.addProp(xpos);
          			    ValueProp ypos = new ValueProp("ypos");
          			    ypos.setValue(Integer.toString(selectedCell.getPosition().getY()));
          			    place.addProp(ypos);
-                  place.setCrossPattern(map.getCrossPattern(selectedCell.getPosition()));
                   ValueProp descProp = new ValueProp("desc");
                   descProp.setValue(descText.getText());
                   place.addProp(descProp);
+*/                  
+                  place.setCrossPattern(map.getCrossPattern(selectedCell.getPosition()));
+                  place.setDesc(descText.getText());
                   selectedCell.setPlace(place);
+                  place.setCell(selectedCell);
                   map.getGameDef().addPlace(place);
                   if (sourcePlace != null) {
                       place.setPlayers(sourcePlace.getPlayers()); // copy any players
@@ -460,7 +816,7 @@ public class MapEditor {
          		 
          	  }
          		dialogFrame.dispatchEvent(new WindowEvent(dialogFrame, WindowEvent.WINDOW_CLOSING));
-            map.setEditMode("cell");
+//            map.setEditMode("cell");
          	}
       	});
    	} 
@@ -609,7 +965,7 @@ public class MapEditor {
               }                         
             }
             dialogFrame.dispatchEvent(new WindowEvent(dialogFrame, WindowEvent.WINDOW_CLOSING));
-            map.setEditMode("cell");
+//            map.setEditMode("cell");
           }
         });    
     }
@@ -947,6 +1303,8 @@ public class MapEditor {
       	saveMenuItem.setActionCommand("Save");
       	JMenuItem saveAsMenuItem = new JMenuItem("SaveAs");
       	saveAsMenuItem.setActionCommand("SaveAs");
+        JMenuItem exportMenuItem = new JMenuItem("Export");
+        exportMenuItem.setActionCommand("Export");
         JMenuItem closeMenuItem = new JMenuItem("Close");
       	closeMenuItem.setActionCommand("Close");	
       	JMenuItem exitMenuItem = new JMenuItem("Exit");
@@ -956,15 +1314,18 @@ public class MapEditor {
         fileMenu.add(openMenuItem);
         fileMenu.add(saveMenuItem);
         fileMenu.add(saveAsMenuItem);
+        fileMenu.add(exportMenuItem);
         fileMenu.add(closeMenuItem);       
         fileMenu.add(exitMenuItem); 
 
       	JMenuItem cellMenuItem = new JMenuItem("Cells");
       	cellMenuItem.setActionCommand("Cells");
+        JMenuItem defaultCellMenuItem = new JMenuItem("Default Cell");
+        defaultCellMenuItem.setActionCommand("Default");
       	JMenuItem colorsMenuItem = new JMenuItem("Colors");
         colorsMenuItem.setActionCommand("Colors");
-        JMenuItem defaultColorMenuItem = new JMenuItem("Default Color");
-        defaultColorMenuItem.setActionCommand("Default Color");
+        JMenuItem texturesMenuItem = new JMenuItem("Textures");
+        texturesMenuItem.setActionCommand("Textures");        
         JMenuItem wallMenuItem = new JMenuItem("Walls");
         wallMenuItem.setActionCommand("Walls");
         JMenuItem doorMenuItem = new JMenuItem("Doors");
@@ -974,7 +1335,8 @@ public class MapEditor {
 
         editMenu.add(cellMenuItem);
         editMenu.add(colorsMenuItem);
-        editMenu.add(defaultColorMenuItem);
+        editMenu.add(texturesMenuItem);
+        editMenu.add(defaultCellMenuItem);
         editMenu.add(wallMenuItem);
         editMenu.add(doorMenuItem);
         editMenu.add(createItemMenuItem);
@@ -1003,12 +1365,14 @@ public class MapEditor {
       	openMenuItem.addActionListener(fileMenuListener);
       	saveMenuItem.addActionListener(fileMenuListener);
       	saveAsMenuItem.addActionListener(fileMenuListener);
-      	closeMenuItem.addActionListener(fileMenuListener);
+      	exportMenuItem.addActionListener(fileMenuListener);
+        closeMenuItem.addActionListener(fileMenuListener);
       	exitMenuItem.addActionListener(fileMenuListener);
 
       	cellMenuItem.addActionListener(editMenuListener);
       	colorsMenuItem.addActionListener(editMenuListener);
-      	defaultColorMenuItem.addActionListener(editMenuListener);
+        texturesMenuItem.addActionListener(editMenuListener);
+      	defaultCellMenuItem.addActionListener(editMenuListener);
       	wallMenuItem.addActionListener(editMenuListener);
         doorMenuItem.addActionListener(editMenuListener);
 
@@ -1057,6 +1421,9 @@ public class MapEditor {
          	else if (cmd.equals("New")) {
          		newMap();
          	}
+          else if (cmd.equals("Export")) {
+            export();
+          }
          	else if (cmd.equals("Close")) {
          		cleanup(false);  // dont save changes
          	}
@@ -1081,8 +1448,11 @@ public class MapEditor {
           else if (cmd.equals("Colors")) {
             editColors();
           }
-          else if (cmd.equals("Default Color")) {
-            pickDefaultColor();
+          else if (cmd.equals("Textures")) {
+            pickTexture();
+          }
+          else if (cmd.equals("Default")) {
+            pickDefaultCell();
           }
           else if (cmd.equals("Doors")) {
             editDoors();

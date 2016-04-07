@@ -37,6 +37,7 @@ public class GameWrapper {
 			br.close();
 			System.out.println("Read " + i + " lines from " + fname);
 			gameDef.resolve();
+			mapDef.resolve(gameDef);
 			return new GameWrapper(gameDef, mapDef);
 		}
 		catch (IOException e) {

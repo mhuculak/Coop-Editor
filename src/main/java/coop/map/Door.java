@@ -3,12 +3,14 @@ package coop.map;
 public class Door {
 
 	private String id;
+	private String className;
 	private MyPoint wallPos;           // point on the wall
 	private MyPoint innerPos;           // point inside the door
 	private String innerCellid;        // inside the house
 	private String outerCellid;        // outside the house
 	private String wallid;             // door must be on a wall, also each wall can have 0-1 doors	
 	private boolean isLocked;
+	private String keyName;            // name of key needed to unlock
 	
 	public Door(String id, DoorDef doorDef, boolean isLocked) {
 		this.id = id;
@@ -18,6 +20,7 @@ public class Door {
 		this.outerCellid = doorDef.getOuterCell().getID();
 		this.wallid = doorDef.getWall().getID();
 		this.isLocked = isLocked;
+		className = "coop.map.Door";
 	}
 
 	public Door(String line) {
@@ -29,10 +32,18 @@ public class Door {
 		outerCellid = c[4];
 		wallid = c[5];		
 		isLocked = Boolean.parseBoolean(c[6]);
+		if (c.length == 8) {
+			keyName = c[7];
+		}
+		className = "coop.map.Door";
 	}
 
 	public String getID() {
 		return id;
+	}
+
+	public String getClassName() {
+		return className;
 	}
 
 	public MyPoint getWallPos() {
@@ -47,12 +58,20 @@ public class Door {
 		return wallid;
 	}
 
-	public boolean getIsLocked() {
+	public boolean isLocked() {
 		return isLocked;
 	}
 
 	public void setIsLocked(boolean isLocked) {
 		this.isLocked = isLocked;
+	}
+
+	public String getKeyName() {
+		return keyName;
+	}
+
+	public void setKeyName(String kname) {
+		keyName = kname;
 	}
 
 	public void toggle() { // toggles the direction the door faces
@@ -66,6 +85,9 @@ public class Door {
 		sb.append("door"+id+":"+wallPos.toString()+":"+innerPos.toString());
 		sb.append(":"+innerCellid+":"+outerCellid+":"+wallid);
 		sb.append(":"+Boolean.toString(isLocked));
+		if (keyName != null) {
+			sb.append(":"+keyName);
+		}
 		return sb.toString();
 	}
 

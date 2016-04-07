@@ -4,39 +4,44 @@ package coop.map;
 */
 import java.awt.*;
 
-public class Wall {
-	private String id;
+public class Wall extends Obstacle {	
+	private String className;
 	private MyPoint endpoint1;
 	private MyPoint endpoint2;
-	private String cellID;	
+	private Cell innerCell;
+	private Cell outerCell;
+	private String cellID;		
 	private double height;
 	private boolean hasRoof;
 	private Color color;
 	private String doorID;
 
-	Wall(String id, MyPoint e1, MyPoint e2, String c, double h, boolean roof, Color color) {
-		this.id = id;
+	Wall(String id, int direction, MyPoint e1, MyPoint e2, Cell c, double h, boolean roof, Color color) {
+		super(id, direction);
 		this.color = color;
 		endpoint1 = e1;
 		endpoint2 = e2;
-		cellID = c;		
+		innerCell = c;		
 		height = h;
 		hasRoof = roof;
+		cellID = innerCell.getID();
+		className = "coop.map.Wall";
 	}
 
 	Wall(String line) {
+		super(line);
 		String[] c = line.split(":");
-		id = c[0].replaceAll("\\D+","");
-		endpoint1 = new MyPoint(c[1]);
-		endpoint2 = new MyPoint(c[2]);
-		cellID = c[3];		
-		height = Double.parseDouble(c[4]);
-		hasRoof = Boolean.parseBoolean(c[4]);
-		String[] rgb = c[6].split(",");
+		endpoint1 = new MyPoint(c[2]);
+		endpoint2 = new MyPoint(c[3]);
+		cellID = c[4];		
+		height = Double.parseDouble(c[5]);
+		hasRoof = Boolean.parseBoolean(c[6]);
+		String[] rgb = c[7].split(",");
 		color = new Color(Integer.parseInt(rgb[0]), Integer.parseInt(rgb[1]), Integer.parseInt(rgb[2]));
-		if (c.length == 8) {
-			doorID = c[7];
+		if (c.length == 9) {
+			doorID = c[8];
 		}
+		className = "coop.map.Wall";
 	}
 
 	public boolean contains(MyLine line) {
@@ -47,6 +52,26 @@ public class Wall {
 			return true;
 		}
 		return false;
+	}
+
+	public String getClassName() {
+		return className;
+	}
+
+	public Double getHeight() {
+		return height;
+	}
+
+	public String getCellID() {
+		return cellID;
+	}
+
+	public void setOuterCell(Cell cell) {
+		outerCell = cell;
+	}
+
+	public boolean hasRoof() {
+		return hasRoof;
 	}
 
 	public void setDoorID(String doorID) {
@@ -61,10 +86,6 @@ public class Wall {
 		return doorID;
 	}
 
-	public String getID() {
-		return id;
-	}
-
 	public MyPoint getEndp1() {
 		return endpoint1;
 	}
@@ -77,9 +98,18 @@ public class Wall {
 		return color;
 	}
 
+	public Cell getCell() {
+		return innerCell;
+	}
+
+	public Cell getOuterCell() {
+		return outerCell;
+	}
+
 	public String toString()  {
 		StringBuilder sb = new StringBuilder(100);
-		sb.append("wall"+id+":"+endpoint1.toString()+":"+endpoint2.toString()+":");
+		sb.append(super.toString());
+		sb.append(":"+endpoint1.toString()+":"+endpoint2.toString()+":");
 		sb.append(cellID+":"+Double.toString(height)+":"+Boolean.toString(hasRoof));
 		sb.append(":"+color.getRed() + "," + color.getGreen() + "," + color.getBlue());
 		if (doorID != null) {

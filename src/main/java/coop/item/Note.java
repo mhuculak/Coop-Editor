@@ -2,7 +2,7 @@ package coop.item;
 
 public class Note extends ActionItem implements HasText {
 
-	private String noteText;	
+	private String text;	
 
 	public Note() {
 		init();		
@@ -12,7 +12,7 @@ public class Note extends ActionItem implements HasText {
 		super(line);
 		init();
 		String[] data = line.split("#");		
-		noteText = data[data.length-1];		
+		text = data[data.length-1];		
 	}
 
 	private void init() {
@@ -22,19 +22,19 @@ public class Note extends ActionItem implements HasText {
 
 	public void setText(String noteText) {
 		System.out.println("Setting note text to " + noteText);
-		this.noteText = noteText;
+		this.text = noteText;
 	}
 
 	public String getText() {
-		return noteText;
+		return text;
 	}
 
 	@Override
 	public String toString(String className) {
 		StringBuilder sb = new StringBuilder(100);
 		sb.append(super.toString(null));
-		if (noteText != null) {
-			sb.append("#"+noteText);
+		if (text != null) {
+			sb.append("#"+text);
 		}
 		if (className != null) {
 			sb.append("#"+className);

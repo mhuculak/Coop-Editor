@@ -8,6 +8,7 @@ import coop.map.Wall;
 import coop.map.Door;
 import coop.player.Player;
 import coop.item.Item;
+import coop.map.Texture;
 
 import java.io.*;
 import java.util.Map;
@@ -32,6 +33,11 @@ public class MapFile {
 			Color c = mapDef.getDefaultColor();
 			if (c != null) {
 				bw.write("defaultColor:"+c.getRed() + "," + c.getGreen() + "," + c.getBlue());
+				bw.newLine();
+			}
+			Texture t = mapDef.getDefaultTexture();
+			if (t != null) {
+				bw.write("defaultTexture:"+t.getName());
 				bw.newLine();
 			}
 			if (gameDef.getPlaces() != null) {

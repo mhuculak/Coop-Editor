@@ -4,6 +4,7 @@ import coop.map.Place;
 
 public class Item {
 	private String id;
+	private String className;
 	private String name;        // name of the specific item object created
 	private String type;        // type is associated with the class used to create the item
 	private double weight;
@@ -11,6 +12,7 @@ public class Item {
 	private String placeID;
 
 	public Item() {
+		className = "coop.item.Item";
 	}
 
 	public Item(String line) {
@@ -20,6 +22,7 @@ public class Item {
 		type = data[2];
 		weight = Double.parseDouble(data[3]);
 		placeID = data[4];
+		className = "coop.item.Item";
 	}
 
 	public String getID() {
@@ -28,6 +31,10 @@ public class Item {
 
 	public String getName() {
 		return name;
+	}
+
+	public String getClassName() {
+		return className;
 	}
 
 	public String getType() {

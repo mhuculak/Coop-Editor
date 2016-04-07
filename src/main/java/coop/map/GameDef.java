@@ -11,7 +11,13 @@ public class GameDef {
 	private String gameName;
 	private List<Place> places;
 	private List<Player> players;
-	private List<Item> items;	
+	private List<Item> items;
+
+	public GameDef() {
+		places = new ArrayList<Place>();
+		players = new ArrayList<Player>();
+		items = new ArrayList<Item>();
+	}	
 
 	public void setName(String name) {
 		System.out.println("GameDef checking name " + name);
@@ -58,25 +64,16 @@ public class GameDef {
 		}	
 	}
 
-	public void addPlace(Place place) {
-		if (places == null) {
-			places = new ArrayList<Place>();
-		}		
+	public void addPlace(Place place) {				
 		places.add(place);
 	}
 
-	public void addPlayer(Player player) {
-		if	(players == null) {
-			players = new ArrayList<Player>();
-		}
+	public void addPlayer(Player player) {		
 		System.out.println("Add player " + player.getName());		
 		players.add(player);
 	}
 
-	public void addItem(Item item) {
-		if ( items == null) {
-			items = new ArrayList<Item>();
-		}
+	public void addItem(Item item) {		
 		items.add(item);
 	}
 
@@ -114,13 +111,22 @@ public class GameDef {
 		}
 	}
 
-	private Place getPlace (String id) {
+	public Place getPlace (String id) {
 	    for ( Place place : places ) {
     		if (place.getID().equals(id)) {
         		return place;
       		}
       	}
       	return null;
+    }
+
+    public Item findItem(String name, Class c) {
+    	for (Item item : items) {
+    		if (item.getName().equals(name) && item.getClass().equals(c)) {
+    			return item;
+    		}
+    	}
+    	return null;
     }
    
    	// call this after loading GameDef data from a file
@@ -155,6 +161,6 @@ public class GameDef {
   					place.addItem(item); 
   				}
   			}  			
-  		}
+  		}  		
   	}
 }
